@@ -1,3 +1,9 @@
+# env secret variable
+.env
+
+# database data
+data
+
 # compiled output
 /dist
 /node_modules
