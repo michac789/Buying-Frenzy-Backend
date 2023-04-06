@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { ModelService } from 'src/model/model.service';
 import { Restaurant, Menu } from '@prisma/client';
 import { RestaurantDto } from './dto/restaurant.dto';
@@ -25,10 +30,6 @@ export class RestaurantService {
     return await this.model.restaurant.findMany();
   }
 
-  /**
-   * Get a restaurant instance (including all menu), given its id.
-   * Returns 404 if id is invalid.
-   */
   async getRestaurantById(restaurantId: number): Promise<Restaurant> {
     const instance = await this.model.restaurant.findFirst({
       where: { id: restaurantId },
@@ -38,25 +39,32 @@ export class RestaurantService {
     return instance;
   }
 
-  /**
-   * Create a new restaurant instance.
-   * TODO - add validation (unique values, not allow negative, not allow empty)
-   */
   async createRestaurant(dto: RestaurantDto): Promise<Restaurant> {
-    const instance = await this.model.restaurant.create({
-      data: {
-        cashBalance: 0,
-        ...dto,
-      },
-    });
-    return instance;
+    try {
+      const instance = await this.model.restaurant.create({
+        data: {
+          cashBalance: 0,
+          ...dto,
+        },
+      });
+      return instance;
+    } catch (error) {
+      // if violates unique constraint
+      if (error.code === 'P2002')
+        throw new ConflictException('Name should be unique!');
+      throw new BadRequestException(error);
+    }
   }
 
   async createMenuInRestaurant(
     restaurantId: number,
     dto: MenuDto,
   ): Promise<Menu> {
-    const instance = await this.model.menu.create({
+    const instance = await this.model.restaurant.findFirst({
+      where: { id: restaurantId },
+    });
+    if (instance === null) throw new NotFoundException();
+    return await this.model.menu.create({
       data: {
         restaurant: {
           connect: {
@@ -66,20 +74,27 @@ export class RestaurantService {
         ...dto,
       },
     });
-    return instance;
   }
 
-  async updateRestaurant(
+  async updateRestaurantById(
     restaurantId: number,
     dto: RestaurantDto,
   ): Promise<Restaurant> {
+    const instance = await this.model.restaurant.findFirst({
+      where: { id: restaurantId },
+    });
+    if (instance === null) throw new NotFoundException();
     return await this.model.restaurant.update({
       where: { id: restaurantId },
       data: dto,
     });
   }
 
-  async deleteRestaurant(restaurantId: number): Promise<Restaurant> {
+  async deleteRestaurantById(restaurantId: number): Promise<Restaurant> {
+    const instance = await this.model.restaurant.findFirst({
+      where: { id: restaurantId },
+    });
+    if (instance === null) throw new NotFoundException();
     return await this.model.restaurant.delete({
       where: {
         id: restaurantId,
@@ -92,14 +107,22 @@ export class RestaurantService {
 export class MenuService {
   constructor(private model: ModelService) {}
 
-  async updateMenu(menuId: number, dto: MenuDto): Promise<Menu> {
+  async updateMenuById(menuId: number, dto: MenuDto): Promise<Menu> {
+    const instance = await this.model.menu.findFirst({
+      where: { id: menuId },
+    });
+    if (instance === null) throw new NotFoundException();
     return await this.model.menu.update({
       where: { id: menuId },
       data: dto,
     });
   }
 
-  async deleteMenu(menuId: number): Promise<Menu> {
+  async deleteMenuById(menuId: number): Promise<Menu> {
+    const instance = await this.model.menu.findFirst({
+      where: { id: menuId },
+    });
+    if (instance === null) throw new NotFoundException();
     return await this.model.menu.delete({
       where: { id: menuId },
     });

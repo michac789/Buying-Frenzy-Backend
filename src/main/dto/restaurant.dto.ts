@@ -1,9 +1,11 @@
+import { IsString, IsNotEmpty, Validate } from 'class-validator';
 
-
-// TODO - add validators
 export class RestaurantDto {
+  @IsString()
+  @IsNotEmpty()
   openingHours: string;
+
+  @IsString()
+  @IsNotEmpty()
   restaurantName: string;
 }
-
-
