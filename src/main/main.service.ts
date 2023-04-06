@@ -4,19 +4,14 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { ModelService } from 'src/model/model.service';
-import { Restaurant, Menu, User } from '@prisma/client';
+import { Restaurant, Menu, User, PurchaseHistory } from '@prisma/client';
 import { RestaurantDto } from './dto/restaurant.dto';
 import { MenuDto } from './dto/menu.dto';
-
-@Injectable({})
-export class MainService {
-  test() {
-    console.log('test');
-    return 'test';
-  }
-}
+import { PurchaseDto } from './dto/purchase.dto';
 
 @Injectable({})
 export class RestaurantService {
@@ -157,5 +152,82 @@ export class MenuService {
     return await this.model.menu.delete({
       where: { id: menuId },
     });
+  }
+}
+
+@Injectable({})
+export class PurchaseService {
+  constructor(private model: ModelService) {}
+
+  async getMenuById(menuId: number): Promise<Menu> {
+    const menu = await this.model.menu.findFirst({
+      where: { id: menuId },
+    });
+    return menu;
+  }
+
+  async purchaseDish(dto: PurchaseDto, user: User): Promise<PurchaseHistory[]> {
+    // calculate total price, need to use for loop to await
+    let totalPrice = 0;
+    for (let i = 0; i < dto.items.length; i++) {
+      console.log(dto.items[i].menuId);
+      let menu = await this.model.menu.findFirst({
+        where: { id: dto.items[i].menuId },
+      });
+      if (menu === null) throw new BadRequestException('Invalid Menu ID');
+      totalPrice += menu.price.toNumber() * dto.items[i].quantity;
+    }
+
+    // if not enough money from user's balance, return 402
+    if (user.cashBalance.toNumber() < totalPrice)
+      throw new HttpException('Payment Required', HttpStatus.PAYMENT_REQUIRED);
+
+    // else create transaction for each dish item purchased, increase restaurant balance
+    let purchases = [];
+    for (let i = 0; i < dto.items.length; i++) {
+      console.log(dto.items[i].menuId);
+      let menu = await this.model.menu.findFirst({
+        where: { id: dto.items[i].menuId },
+      });
+      let purchase = await this.model.purchaseHistory.create({
+        data: {
+          menu: {
+            connect: {
+              id: menu.id,
+            },
+          },
+          user: {
+            connect: {
+              id: user.id,
+            },
+          },
+          transactionDate: new Date(),
+        },
+      });
+      purchases.push(purchase);
+      const restaurant = await this.model.restaurant.findFirst({
+        where: { id: menu.id },
+      });
+      await this.model.restaurant.update({
+        where: { id: menu.restaurantId },
+        data: {
+          // optimistic locking
+          cashBalance:
+            restaurant.cashBalance.toNumber() + menu.price.toNumber(),
+        },
+      });
+    }
+
+    // decrement user's balance and update
+    // we assume the same user can't make similar request in very close time
+    const newBalance = user.cashBalance.toNumber() - totalPrice;
+    await this.model.user.update({
+      where: { name: user.name },
+      data: {
+        cashBalance: newBalance,
+      },
+    });
+
+    return purchases;
   }
 }

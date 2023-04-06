@@ -10,29 +10,19 @@ import {
   HttpCode,
   UseGuards,
 } from '@nestjs/common';
-import { Request, Req } from '@nestjs/common';
-import { Restaurant, Menu } from '@prisma/client';
-import { MainService, RestaurantService, MenuService } from './main.service';
+import { Restaurant, Menu, PurchaseHistory } from '@prisma/client';
+import {
+  RestaurantService,
+  MenuService,
+  PurchaseService,
+} from './main.service';
 import { RestaurantDto } from './dto/restaurant.dto';
 import { MenuDto } from './dto/menu.dto';
 import { JwtGuard } from 'src/auth/sso.utils';
 import { GetUser } from 'src/auth/sso.utils';
 import { User } from '@prisma/client';
+import { PurchaseDto } from './dto/purchase.dto';
 
-@Controller('main')
-export class MainController {
-  constructor(private mainService: MainService) {}
-
-  @Get()
-  test(@Req() req: Request) {
-    console.log(req.body);
-    return this.mainService.test();
-  }
-}
-
-// TODO - add validators
-// TODO - add permissions
-// TODO - add error handler (404, 400, 409, etc.)
 @Controller('restaurant')
 export class RestaurantController {
   constructor(private service: RestaurantService) {}
@@ -171,5 +161,30 @@ export class MenuController {
     @GetUser() user: User,
   ): Promise<Menu> {
     return await this.service.deleteMenuById(menuId, user);
+  }
+}
+
+@Controller('purchase')
+export class PurchaseController {
+  constructor(private service: PurchaseService) {}
+
+  /**
+   * [POST] /purchase/
+   * Create multiple purchases at once, requires a list of (menuId-quantity) object.
+   * Add appropriate cash balance to restaurant, decrease from user.
+   * Return 201 if success, with the purchase instances created.
+   * Return 401 if not logged in.
+   * Return 400 if it does not satisfy dto constraint.
+   * // TODO - check opening time when making transaction!
+   * Return 404 if any of the menuId is invalid.
+   * Return 402 if cash balance insufficient.
+   */
+  @Post()
+  @UseGuards(JwtGuard)
+  async purchaseDish(
+    @Body() dto: PurchaseDto,
+    @GetUser() user: User,
+  ): Promise<PurchaseHistory[]> {
+    return await this.service.purchaseDish(dto, user);
   }
 }
