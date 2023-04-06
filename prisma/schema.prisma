@@ -14,7 +14,7 @@ model Restaurant {
   id             Int     @id @default(autoincrement())
   cashBalance    Decimal @db.Decimal(10, 2)
   openingHours   String
-  restaurantName String  @unique
+  restaurantName String
   menus          Menu[]
   owner          User?   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   ownerId        Int?
