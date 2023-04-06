@@ -9,7 +9,11 @@ import {
 } from '@nestjs/common';
 import { ModelService } from 'src/model/model.service';
 import { Restaurant, Menu, User, PurchaseHistory } from '@prisma/client';
-import { RestaurantDto } from './dto/restaurant.dto';
+import {
+  RestaurantDto,
+  RestaurantQueryParams,
+  RestaurantPaginator,
+} from './dto/restaurant.dto';
 import { MenuDto } from './dto/menu.dto';
 import { PurchaseDto } from './dto/purchase.dto';
 
@@ -17,13 +21,51 @@ import { PurchaseDto } from './dto/purchase.dto';
 export class RestaurantService {
   constructor(private model: ModelService) {}
 
-  /**
-   * Return all restaurants (without showing menu).
-   * TODO - add query param to filter based on date & time
-   * TODO - add pagination
-   */
-  async getAllRestaurants(): Promise<Restaurant[]> {
-    return await this.model.restaurant.findMany();
+  isStoreOpen(dateTime: Date, openingHours: string): boolean {
+    const weekdays = ['Sun', 'Mon', 'Tues', 'Weds', 'Thurs', 'Fri', 'Sat'];
+    // TODO
+    // given dateTime and openingHours, return if store is open at dateTime or not
+    return true;
+  }
+
+  async getAllRestaurants(
+    query: RestaurantQueryParams,
+  ): Promise<RestaurantPaginator> {
+    let restaurants: Restaurant[];
+    if (query.datetime) {
+      const dateTimeFilter = new Date(query.datetime);
+      if (dateTimeFilter.toString() === 'Invalid Date')
+        throw new BadRequestException('Invalid Date Time Given!');
+      const restaurantsComplete = await this.model.restaurant.findMany();
+      restaurants = restaurantsComplete.filter((restaurant) => {
+        return this.isStoreOpen(dateTimeFilter, restaurant.openingHours);
+      });
+    } else {
+      restaurants = await this.model.restaurant.findMany();
+    }
+    // pagination
+    // by default paginate 10 per page, go to page 1
+    const itemsPerPage: number = !query.itemsperpage ? 10 : query.itemsperpage;
+    const page: number = !query.page ? 1 : query.page;
+    const totalItems = restaurants.length;
+    const numPages = Math.ceil(totalItems / itemsPerPage);
+    if (page < 1 || page > numPages)
+      throw new BadRequestException(
+        `Invalid Page Number (valid: 1-${numPages})`,
+      );
+    const startIndex: number = (page - 1) * itemsPerPage;
+    restaurants = restaurants.slice(
+      startIndex,
+      startIndex + Number(itemsPerPage),
+    );
+    return {
+      items: restaurants,
+      pagination: {
+        total: numPages,
+        hasNext: page < numPages,
+        hasPrev: page > 1,
+      },
+    };
   }
 
   async getRestaurantById(restaurantId: number): Promise<Restaurant> {
@@ -170,7 +212,6 @@ export class PurchaseService {
     // calculate total price, need to use for loop to await
     let totalPrice = 0;
     for (let i = 0; i < dto.items.length; i++) {
-      console.log(dto.items[i].menuId);
       let menu = await this.model.menu.findFirst({
         where: { id: dto.items[i].menuId },
       });
@@ -185,7 +226,6 @@ export class PurchaseService {
     // else create transaction for each dish item purchased, increase restaurant balance
     let purchases = [];
     for (let i = 0; i < dto.items.length; i++) {
-      console.log(dto.items[i].menuId);
       let menu = await this.model.menu.findFirst({
         where: { id: dto.items[i].menuId },
       });

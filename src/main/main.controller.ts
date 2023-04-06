@@ -9,6 +9,7 @@ import {
   Delete,
   HttpCode,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { Restaurant, Menu, PurchaseHistory } from '@prisma/client';
 import {
@@ -16,21 +17,37 @@ import {
   MenuService,
   PurchaseService,
 } from './main.service';
-import { RestaurantDto } from './dto/restaurant.dto';
-import { MenuDto } from './dto/menu.dto';
 import { JwtGuard } from 'src/auth/sso.utils';
 import { GetUser } from 'src/auth/sso.utils';
 import { User } from '@prisma/client';
+import {
+  RestaurantDto,
+  RestaurantQueryParams,
+  RestaurantPaginator,
+} from './dto/restaurant.dto';
+import { MenuDto } from './dto/menu.dto';
 import { PurchaseDto } from './dto/purchase.dto';
 
 @Controller('restaurant')
 export class RestaurantController {
   constructor(private service: RestaurantService) {}
 
-  // [GET] /restaurant/
+  /**
+   * [GET] /restaurant/
+   * Get all restaurants without its menu list, with filter and pagination.
+   * Query Params:
+   * ?datetime=DD/MM/YYYY/HH:MM -> filter restaurant that are open at that datetime
+   * ?itemsperpage=x -> display x items per page, by default 10
+   * ?page=y -> display page y, by default 1
+   * Return 200 if success, with pagination info (total pages, whether next/prev page exist)
+   * Return 400 if any optional query params format is invalid.
+   */
   @Get()
-  async listView(): Promise<Restaurant[]> {
-    return await this.service.getAllRestaurants();
+  async listView(
+    @Query() query: RestaurantQueryParams,
+  ): Promise<RestaurantPaginator> {
+    console.log(query);
+    return await this.service.getAllRestaurants(query);
   }
 
   /**
