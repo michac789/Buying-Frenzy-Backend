@@ -739,6 +739,11 @@
     path-to-regexp "3.2.0"
     tslib "2.5.0"
 
+"@nestjs/elasticsearch@^9.0.0":
+  version "9.0.0"
+  resolved "https://registry.yarnpkg.com/@nestjs/elasticsearch/-/elasticsearch-9.0.0.tgz#09fefffce7160997bb8d54b79c0a68f3d5d820dc"
+  integrity sha512-+NhXg0od/luNuObrCoouO8IGJ5d8esd2LbqOyX4wqM3PtzoVgQC5uDoxHu0ZyWkp/Coj7OiT0osYN9rgctEPbg==
+
 "@nestjs/jwt@^10.0.3":
   version "10.0.3"
   resolved "https://registry.yarnpkg.com/@nestjs/jwt/-/jwt-10.0.3.tgz#e74e992cde99df266616c8bedf2404898eec4819"

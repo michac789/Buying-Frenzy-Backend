@@ -32,12 +32,7 @@ export class IsRequiredDateTimeFormat implements ValidatorConstraintInterface {
   }
 }
 
-export class RestaurantQueryParams {
-  @IsString()
-  @Validate(IsRequiredDateTimeFormat)
-  @IsOptional()
-  datetime?: string;
-
+export class PaginatorQueryParams {
   @Type(() => Number)
   @IsInt()
   @IsOptional()
@@ -49,6 +44,19 @@ export class RestaurantQueryParams {
   itemsperpage?: number;
 }
 
+export class RestaurantQueryParams extends PaginatorQueryParams {
+  @IsString()
+  @Validate(IsRequiredDateTimeFormat)
+  @IsOptional()
+  datetime?: string;
+}
+
+export class RestaurantSearchQueryParams extends PaginatorQueryParams {
+  @IsString()
+  @IsNotEmpty()
+  q: string;
+}
+
 export interface RestaurantPaginator {
   items: Restaurant[];
   pagination: {
@@ -56,4 +64,12 @@ export interface RestaurantPaginator {
     hasNext: boolean;
     hasPrev: boolean;
   };
+}
+
+interface RestaurantWithRelevance extends Restaurant {
+  relevance: number;
+}
+
+export interface RestaurantSearchPaginator extends RestaurantPaginator {
+  items: RestaurantWithRelevance[];
 }

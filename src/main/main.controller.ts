@@ -24,6 +24,8 @@ import {
   RestaurantDto,
   RestaurantQueryParams,
   RestaurantPaginator,
+  RestaurantSearchQueryParams,
+  RestaurantSearchPaginator,
 } from './dto/restaurant.dto';
 import { MenuDto } from './dto/menu.dto';
 import { PurchaseDto } from './dto/purchase.dto';
@@ -48,6 +50,20 @@ export class RestaurantController {
   ): Promise<RestaurantPaginator> {
     console.log(query);
     return await this.service.getAllRestaurants(query);
+  }
+
+  /**
+   * [GET] /restaurant/search/
+   * Requires 'q' query parameter for search query, optional pagination similar to above.
+   * Get restaurants in descending order or relevance (by Jaro Winkler algo).
+   * Return 200 if success, with relevance for each restaurant & pagination info.
+   * Return 400 if any optional query params format is invalid.
+   */
+  @Get('search')
+  async search(
+    @Query() query: RestaurantSearchQueryParams,
+  ): Promise<RestaurantSearchPaginator> {
+    return this.service.searchRestaurantByRelevance(query);
   }
 
   /**

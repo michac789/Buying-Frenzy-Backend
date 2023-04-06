@@ -13,19 +13,40 @@ import {
   RestaurantDto,
   RestaurantQueryParams,
   RestaurantPaginator,
+  RestaurantSearchQueryParams,
+  RestaurantSearchPaginator,
 } from './dto/restaurant.dto';
 import { MenuDto } from './dto/menu.dto';
 import { PurchaseDto } from './dto/purchase.dto';
+import { paginate, isStoreOpen, getRelevance } from './main.utils';
 
 @Injectable({})
 export class RestaurantService {
   constructor(private model: ModelService) {}
 
-  isStoreOpen(dateTime: Date, openingHours: string): boolean {
-    const weekdays = ['Sun', 'Mon', 'Tues', 'Weds', 'Thurs', 'Fri', 'Sat'];
-    // TODO
-    // given dateTime and openingHours, return if store is open at dateTime or not
-    return true;
+  async searchRestaurantByRelevance(
+    query: RestaurantSearchQueryParams,
+  ): Promise<RestaurantSearchPaginator> {
+    const results = await this.model.restaurant.findMany({
+      include: { menus: true },
+    });
+    // for each restaurant:
+    // get the relevance score between q and restaurant name
+    // for each dish, get relevance score between q and dish name but minus 0.1
+    // relevance score is the highest of all of those
+    results.forEach((result) => {
+      let relevanceList = [];
+      relevanceList.push(getRelevance(query.q, result.restaurantName));
+      result.menus.forEach((menu) => {
+        relevanceList.push(getRelevance(query.q, menu.dishName) - 0.1);
+      });
+      result['relevance'] = Math.max(...relevanceList);
+    });
+    results.sort((a, b) => b['relevance'] - a['relevance']);
+    // pagination
+    const itemsPerPage: number = !query.itemsperpage ? 10 : query.itemsperpage;
+    const page: number = !query.page ? 1 : query.page;
+    return paginate(results, itemsPerPage, page);
   }
 
   async getAllRestaurants(
@@ -37,9 +58,9 @@ export class RestaurantService {
       if (dateTimeFilter.toString() === 'Invalid Date')
         throw new BadRequestException('Invalid Date Time Given!');
       const restaurantsComplete = await this.model.restaurant.findMany();
-      restaurants = restaurantsComplete.filter((restaurant) => {
-        return this.isStoreOpen(dateTimeFilter, restaurant.openingHours);
-      });
+      restaurants = restaurantsComplete.filter((restaurant) =>
+        isStoreOpen(dateTimeFilter, restaurant.openingHours),
+      );
     } else {
       restaurants = await this.model.restaurant.findMany();
     }
@@ -47,25 +68,7 @@ export class RestaurantService {
     // by default paginate 10 per page, go to page 1
     const itemsPerPage: number = !query.itemsperpage ? 10 : query.itemsperpage;
     const page: number = !query.page ? 1 : query.page;
-    const totalItems = restaurants.length;
-    const numPages = Math.ceil(totalItems / itemsPerPage);
-    if (page < 1 || page > numPages)
-      throw new BadRequestException(
-        `Invalid Page Number (valid: 1-${numPages})`,
-      );
-    const startIndex: number = (page - 1) * itemsPerPage;
-    restaurants = restaurants.slice(
-      startIndex,
-      startIndex + Number(itemsPerPage),
-    );
-    return {
-      items: restaurants,
-      pagination: {
-        total: numPages,
-        hasNext: page < numPages,
-        hasPrev: page > 1,
-      },
-    };
+    return paginate(restaurants, itemsPerPage, page);
   }
 
   async getRestaurantById(restaurantId: number): Promise<Restaurant> {
