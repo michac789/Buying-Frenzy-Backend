@@ -13,3 +13,22 @@ export class UserDto {
   @IsOptional()
   email: string;
 }
+
+// used to change password
+export class UserPasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+
+  @IsString()
+  @IsNotEmpty()
+  newPassword: string;
+
+  @IsEmail()
+  @IsOptional()
+  email: string;
+}
