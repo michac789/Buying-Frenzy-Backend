@@ -48,7 +48,6 @@ export class RestaurantController {
   async listView(
     @Query() query: RestaurantQueryParams,
   ): Promise<RestaurantPaginator> {
-    console.log(query);
     return await this.service.getAllRestaurants(query);
   }
 
