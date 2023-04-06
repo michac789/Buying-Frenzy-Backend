@@ -1,12 +1,27 @@
-import { Controller, Post, Body, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Put,
+  Delete,
+  HttpCode,
+} from '@nestjs/common';
 import { SSOService } from './sso.service';
-import { UserDto, UserPasswordDto } from './dto/user.dto';
+import {
+  UserDto,
+  UserPasswordDto,
+  UserBalanceDto,
+  UserSafeType,
+} from './dto/user.dto';
 import { UseGuards } from '@nestjs/common';
 import { JwtGuard } from './sso.utils';
+import { GetUser } from './sso.utils';
+import { User } from '@prisma/client';
 
 @Controller('sso')
 export class SSOController {
-  constructor(private authService: SSOService) {}
+  constructor(private ssoService: SSOService) {}
 
   /*
    * [POST] /sso/register/
@@ -17,7 +32,7 @@ export class SSOController {
    */
   @Post('register')
   register(@Body() dto: UserDto): Promise<{ access_token: string }> {
-    return this.authService.register(dto);
+    return this.ssoService.register(dto);
   }
 
   /*
@@ -28,19 +43,63 @@ export class SSOController {
    */
   @Post('login')
   login(@Body() dto: UserDto): Promise<{ access_token: string }> {
-    return this.authService.login(dto);
+    return this.ssoService.login(dto);
   }
 
   /**
-   * [POST] /sso/user/
+   * [GET] /sso/user/
+   * Get profile info (id, name, email, cashBalance) of the requesting user.
+   * Return 200 if success, with profile information.
+   * Return 401 if not logged in.
+   */
+  @Get('user')
+  @UseGuards(JwtGuard)
+  async getProfile(@GetUser() user: User): Promise<UserSafeType> {
+    return user;
+  }
+
+  /**
+   * [PUT] /sso/user/
    * Allows you to change your password and email, given old password.
    * Return 200 if success.
    * Return 400 if it does not satisfy dto constraint.
-   * Return 401 if you are not logged in, or if password does not match.
+   * Return 401 if not logged in, or if password does not match.
    */
-  @Post('user')
+  @Put('user')
   @UseGuards(JwtGuard)
-  test(@Body() dto: UserPasswordDto): Promise<string> {
-    return this.authService.changePassword(dto);
+  changeUserData(@Body() dto: UserPasswordDto): Promise<UserSafeType> {
+    return this.ssoService.changePassword(dto);
+  }
+
+  /**
+   * [DELETE] /sso/user/
+   * Given user name and correct password, delete the account.
+   * Return 204 if success.
+   * Return 401 if not logged in, or if password does not match.
+   */
+  @Delete('user')
+  @UseGuards(JwtGuard)
+  @HttpCode(204)
+  deleteUser(@Body() dto: UserDto): Promise<UserSafeType> {
+    return this.ssoService.deleteAccount(dto);
+  }
+
+  /**
+   * [POST] /sso/user/topup/
+   * Topup (increase) the cash balance of a user.
+   * Note: realistically, you should integrate this with 3rd party API to make payment
+   * For the sake of this sample, it is assumed you already make the necessary payment
+   * Increase current user cashBalance by 'additionalCashBalance'
+   * Return 201 if topup success.
+   * Return 400 if body does not satisfy dto constraint.
+   * Return 401 if not logged in.
+   */
+  @Post('user/topup')
+  @UseGuards(JwtGuard)
+  topUp(
+    @Body() dto: UserBalanceDto,
+    @GetUser() user: User,
+  ): Promise<UserSafeType> {
+    return this.ssoService.topUp(dto, user);
   }
 }

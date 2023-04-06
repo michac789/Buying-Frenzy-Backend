@@ -1,4 +1,12 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Decimal } from '@prisma/client/runtime';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class UserDto {
   @IsString()
@@ -31,4 +39,19 @@ export class UserPasswordDto {
   @IsEmail()
   @IsOptional()
   email: string;
+}
+
+// top up functionality
+export class UserBalanceDto {
+  @IsNumber()
+  @Min(0)
+  additionalCashBalance: number;
+}
+
+// define safe return type of user instance (exclude password)
+export interface UserSafeType {
+  id: number;
+  name: string;
+  email: string;
+  cashBalance: Decimal;
 }

@@ -6,8 +6,14 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon from 'argon2';
-import { UserDto, UserPasswordDto } from './dto/user.dto';
+import {
+  UserBalanceDto,
+  UserDto,
+  UserPasswordDto,
+  UserSafeType,
+} from './dto/user.dto';
 import { ModelService } from 'src/model/model.service';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class SSOService {
@@ -43,22 +49,49 @@ export class SSOService {
     return this.signToken(user.id, user.name);
   }
 
-  async changePassword(dto: UserPasswordDto): Promise<string> {
+  async changePassword(dto: UserPasswordDto): Promise<UserSafeType> {
     const user = await this.model.user.findUnique({
       where: {
         name: dto.name,
       },
     });
     const verified = await argon.verify(user.password, dto.password);
-    if (!verified) throw new UnauthorizedException('Password not the same!');
-    await this.model.user.update({
+    if (!verified) throw new UnauthorizedException('Wrong Password!');
+    const instance = await this.model.user.update({
       where: { name: dto.name },
       data: {
         password: await argon.hash(dto.newPassword),
         email: dto.email,
       },
     });
-    return 'success';
+    const { id, cashBalance, name, email } = instance;
+    return { id, cashBalance, name, email };
+  }
+
+  async deleteAccount(dto: UserDto): Promise<UserSafeType> {
+    const user = await this.model.user.findUnique({
+      where: {
+        name: dto.name,
+      },
+    });
+    const verified = await argon.verify(user.password, dto.password);
+    if (!verified) throw new UnauthorizedException('Wrong Password!');
+    const instance = await this.model.user.delete({
+      where: { name: dto.name },
+    });
+    const { id, cashBalance, name, email } = instance;
+    return { id, cashBalance, name, email };
+  }
+
+  async topUp(dto: UserBalanceDto, user: User): Promise<UserSafeType> {
+    const instance = await this.model.user.update({
+      where: { name: user.name },
+      data: {
+        cashBalance: user.cashBalance.toNumber() + dto.additionalCashBalance,
+      },
+    });
+    const { id, cashBalance, name, email } = instance;
+    return { id, cashBalance, name, email };
   }
 
   async signToken(
