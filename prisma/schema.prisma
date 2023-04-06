@@ -11,34 +11,36 @@ datasource db {
 }
 
 model Restaurant {
-  id Int @id @default(autoincrement())
-  cashBalance Decimal @db.Decimal(10, 2)
-  openingHours String
-  restaurantName String @unique
-  menus Menu[]
+  id             Int     @id @default(autoincrement())
+  cashBalance    Decimal @db.Decimal(10, 2)
+  openingHours   String
+  restaurantName String  @unique
+  menus          Menu[]
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  cashBalance Decimal @db.Decimal(10, 2)
-  name String @unique
+  id              Int               @id @default(autoincrement())
+  cashBalance     Decimal           @db.Decimal(10, 2)
+  name            String            @unique
+  password        String
+  email           String?
   purchaseHistory PurchaseHistory[]
 }
 
 model Menu {
-  id Int @id @default(autoincrement())
-  dishName String
-  price Decimal @db.Decimal(10, 2)
+  id           Int               @id @default(autoincrement())
+  dishName     String
+  price        Decimal           @db.Decimal(10, 2)
   restaurantId Int
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
-  purchases PurchaseHistory[]
+  restaurant   Restaurant        @relation(fields: [restaurantId], references: [id])
+  purchases    PurchaseHistory[]
 }
 
 model PurchaseHistory {
-  id Int @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   transactionDate DateTime
-  menuId Int
-  menu Menu @relation(fields: [menuId], references: [id])
-  userId Int
-  user User @relation(fields: [userId], references: [id])
+  menuId          Int
+  menu            Menu     @relation(fields: [menuId], references: [id])
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id])
 }

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, Validate } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class RestaurantDto {
   @IsString()
