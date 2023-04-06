@@ -16,6 +16,8 @@ model Restaurant {
   openingHours   String
   restaurantName String  @unique
   menus          Menu[]
+  owner          User?   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId        Int?
 }
 
 model User {
@@ -24,6 +26,7 @@ model User {
   name            String            @unique
   password        String
   email           String?
+  restaurants     Restaurant[]
   purchaseHistory PurchaseHistory[]
 }
 
@@ -32,7 +35,7 @@ model Menu {
   dishName     String
   price        Decimal           @db.Decimal(10, 2)
   restaurantId Int
-  restaurant   Restaurant        @relation(fields: [restaurantId], references: [id])
+  restaurant   Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   purchases    PurchaseHistory[]
 }
 
@@ -40,7 +43,7 @@ model PurchaseHistory {
   id              Int      @id @default(autoincrement())
   transactionDate DateTime
   menuId          Int
-  menu            Menu     @relation(fields: [menuId], references: [id])
+  menu            Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
   userId          Int
-  user            User     @relation(fields: [userId], references: [id])
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -8,12 +8,16 @@ import {
   Put,
   Delete,
   HttpCode,
+  UseGuards,
 } from '@nestjs/common';
 import { Request, Req } from '@nestjs/common';
 import { Restaurant, Menu } from '@prisma/client';
 import { MainService, RestaurantService, MenuService } from './main.service';
 import { RestaurantDto } from './dto/restaurant.dto';
 import { MenuDto } from './dto/menu.dto';
+import { JwtGuard } from 'src/auth/sso.utils';
+import { GetUser } from 'src/auth/sso.utils';
+import { User } from '@prisma/client';
 
 @Controller('main')
 export class MainController {
@@ -41,14 +45,20 @@ export class RestaurantController {
 
   /**
    * [POST] /restaurant/
-   * Create a new restaurant instance, cashBalance defaulted to 0.
+   * Create a new restaurant instance, cashBalance defaulted to 0,
+   * the user who makes the request becomes the restaurant owner (user).
    * Return 201 if success, with the new created instance.
+   * Return 401 if not logged in.
    * Return 400 if it does not satisfy dto constraint.
    * Return 409 if conflict (same restaurantName).
    */
   @Post()
-  async createView(@Body() dto: RestaurantDto): Promise<Restaurant> {
-    return await this.service.createRestaurant(dto);
+  @UseGuards(JwtGuard)
+  async createView(
+    @Body() dto: RestaurantDto,
+    @GetUser() user: User,
+  ): Promise<Restaurant> {
+    return await this.service.createRestaurant(dto, user);
   }
 
   /**
@@ -68,44 +78,57 @@ export class RestaurantController {
    * [POST] /restaurant/:id/
    * Create a menu with a foreign key to a restaurant instance.
    * Return 201 if success, with the new created instance.
+   * Return 401 if not logged in.
    * Return 400 if it does not satisfy dto constraint.
+   * Return 403 if not restaurant owner.
    * Return 404 if instance not found (invalid id).
    * TODO - do not allow dish name to be the same in the same resto?
    */
   @Post(':id')
+  @UseGuards(JwtGuard)
   async detailCreateView(
     @Param('id', ParseIntPipe) restaurantId: number,
     @Body() dto: MenuDto,
+    @GetUser() user: User,
   ): Promise<MenuDto> {
-    return await this.service.createMenuInRestaurant(restaurantId, dto);
+    return await this.service.createMenuInRestaurant(restaurantId, dto, user);
   }
 
   /**
    * [PUT] /restaurant/:id/
    * Update existing restaurant instance, given its id.
    * Return 200 if success, with the new updated instance.
+   * Return 401 if not logged in.
    * Return 400 if it does not satisfy dto constraint.
+   * Return 403 if not restaurant owner.
    * Return 404 if instance not found (invalid id).
    */
   @Put(':id')
+  @UseGuards(JwtGuard)
   async updateView(
     @Param('id', ParseIntPipe) restaurantId: number,
     @Body() dto: RestaurantDto,
+    @GetUser() user: User,
   ): Promise<Restaurant> {
-    return await this.service.updateRestaurantById(restaurantId, dto);
+    return await this.service.updateRestaurantById(restaurantId, dto, user);
   }
 
   /**
    * [DELETE] /restaurant/:id/
    * Delete existing restaurant instance, given its id.
    * Return 204 if success.
+   * Return 401 if not logged in.
    * Return 404 if instance not found (invalid id).
-   * TODO - set oncascade delete on schema? what happen when the fk is deleted?
+   * Return 403 if not restaurant owner.
    */
   @Delete(':id')
+  @UseGuards(JwtGuard)
   @HttpCode(204)
-  async deleteView(@Param('id', ParseIntPipe) restaurantId: number) {
-    return await this.service.deleteRestaurantById(restaurantId);
+  async deleteView(
+    @Param('id', ParseIntPipe) restaurantId: number,
+    @GetUser() user: User,
+  ) {
+    return await this.service.deleteRestaurantById(restaurantId, user);
   }
 }
 
@@ -117,26 +140,36 @@ export class MenuController {
    * [PUT] /restaurant/:id/
    * Update existing menu instance, given its id.
    * Return 200 if success, with the new updated instance.
+   * Return 401 if not logged in.
    * Return 400 if it does not satisfy dto constraint.
+   * Return 403 if not restaurant owner of current dish.
    * Return 404 if instance not found (invalid id).
    */
   @Put()
+  @UseGuards(JwtGuard)
   async updateView(
     @Param('id', ParseIntPipe) menuId: number,
     @Body() dto: MenuDto,
+    @GetUser() user: User,
   ): Promise<Menu> {
-    return await this.service.updateMenuById(menuId, dto);
+    return await this.service.updateMenuById(menuId, dto, user);
   }
 
   /**
    * [DELETE] /menu/:id/
    * Delete existing menu instance, given its id.
    * Return 204 if success, with the new created instance.
+   * Return 401 if not logged in.
    * Return 404 if instance not found (invalid id).
+   * Return 403 if not restaurant owner of current dish.
    */
   @Delete(':id')
+  @UseGuards(JwtGuard)
   @HttpCode(204)
-  async deleteView(@Param('id', ParseIntPipe) menuId: number): Promise<Menu> {
-    return await this.service.deleteMenuById(menuId);
+  async deleteView(
+    @Param('id', ParseIntPipe) menuId: number,
+    @GetUser() user: User,
+  ): Promise<Menu> {
+    return await this.service.deleteMenuById(menuId, user);
   }
 }
