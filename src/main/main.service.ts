@@ -11,6 +11,7 @@ import { ModelService } from '../model/model.service';
 import { Restaurant, Menu, User, PurchaseHistory } from '@prisma/client';
 import {
   RestaurantDto,
+  RestaurantWithMenu,
   RestaurantQueryParams,
   RestaurantPaginator,
   RestaurantSearchQueryParams,
@@ -52,23 +53,72 @@ export class RestaurantService {
   async getAllRestaurants(
     query: RestaurantQueryParams,
   ): Promise<RestaurantPaginator> {
-    let restaurants: Restaurant[];
+    let restaurants: RestaurantWithMenu[];
     if (query.datetime) {
       const dateTimeFilter = new Date(query.datetime);
       if (dateTimeFilter.toString() === 'Invalid Date')
         throw new BadRequestException('Invalid Date Time Given!');
-      const restaurantsComplete = await this.model.restaurant.findMany();
+      const restaurantsComplete = await this.model.restaurant.findMany({
+        include: { menus: true },
+      });
       restaurants = restaurantsComplete.filter((restaurant) =>
         isStoreOpen(dateTimeFilter, restaurant.openingHours),
       );
     } else {
-      restaurants = await this.model.restaurant.findMany();
+      restaurants = await this.model.restaurant.findMany({
+        include: { menus: true },
+      });
     }
+
+    // filter - list top y restaurants that have more or less than x number of dishes within a price range
+    // default values when the query is empty
+    const pricelte = query.pricelte ? query.pricelte : 999999;
+    const pricegte = query.pricegte ? query.pricegte : 0;
+    const dishlte = query.dishlte ? query.dishlte : 10000;
+    const dishgte = query.dishgte ? query.dishgte : 1;
+    // for each restaurant, calculate how many dish lies between the price range
+    restaurants.forEach((restaurant) => {
+      let dishCount = 0;
+      restaurant.menus.forEach((menu) => {
+        if (
+          menu.price.toNumber() >= pricegte &&
+          menu.price.toNumber() <= pricelte
+        ) {
+          dishCount += 1;
+        }
+      });
+      restaurant['dishCount'] = dishCount;
+    });
+    // filter restaurant by the number of dish within that range
+    const restaurantsNew = restaurants
+      .filter(
+        (restaurant) =>
+          restaurant['dishCount'] >= dishgte &&
+          restaurant['dishCount'] <= dishlte,
+      )
+      .map(
+        // only return id, cashBalance, openingHours, restaurantName
+        ({ id, cashBalance, openingHours, restaurantName }) => ({
+          id,
+          cashBalance,
+          openingHours,
+          restaurantName,
+        }),
+      );
+
+    // sort alphabetically if sort is true
+    const sortAlphabetically: boolean = query.sort ? query.sort : false;
+    if (sortAlphabetically) {
+      restaurantsNew.sort((a, b) =>
+        a.restaurantName.localeCompare(b.restaurantName),
+      );
+    }
+
     // pagination
     // by default paginate 10 per page, go to page 1
     const itemsPerPage: number = !query.itemsperpage ? 10 : query.itemsperpage;
     const page: number = !query.page ? 1 : query.page;
-    return paginate(restaurants, itemsPerPage, page);
+    return paginate(restaurantsNew, itemsPerPage, page);
   }
 
   async getRestaurantById(restaurantId: number): Promise<Restaurant> {

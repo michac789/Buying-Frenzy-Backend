@@ -6,9 +6,12 @@ import {
   Validate,
   ValidatorConstraint,
   ValidatorConstraintInterface,
+  IsBoolean,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Restaurant } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime';
+import { Restaurant, Menu } from '@prisma/client';
 
 export class RestaurantDto {
   @IsString()
@@ -49,12 +52,46 @@ export class RestaurantQueryParams extends PaginatorQueryParams {
   @Validate(IsRequiredDateTimeFormat)
   @IsOptional()
   datetime?: string;
+
+  @Type(() => Boolean)
+  @IsBoolean()
+  @IsOptional()
+  sort?: boolean; // default false, if true sort alphabetically
+
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  pricelte?: number; // 'price less than or equal to' filter
+
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  pricegte?: number; // 'price greater than or equal to' filter
+
+  @Type(() => Number)
+  @IsInt()
+  @IsOptional()
+  dishlte?: number; // 'dish count less than or equal to' filter
+
+  @Type(() => Number)
+  @IsInt()
+  @IsOptional()
+  dishgte?: number; // 'dish count grater than or equal to' filter
 }
 
 export class RestaurantSearchQueryParams extends PaginatorQueryParams {
   @IsString()
   @IsNotEmpty()
   q: string;
+}
+
+export interface RestaurantWithMenu {
+  id: number;
+  cashBalance: Decimal;
+  openingHours: string;
+  restaurantName: string;
+  ownerId: number | null;
+  menus: Menu[];
 }
 
 export interface RestaurantPaginator {
