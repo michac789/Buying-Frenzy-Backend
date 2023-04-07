@@ -12,7 +12,7 @@ import {
   UserPasswordDto,
   UserSafeType,
 } from './dto/user.dto';
-import { ModelService } from 'src/model/model.service';
+import { ModelService } from '../model/model.service';
 import { User } from '@prisma/client';
 
 @Injectable()
@@ -26,6 +26,7 @@ export class SSOService {
           cashBalance: 0,
           name: dto.name,
           password: await argon.hash(dto.password),
+          email: dto.email,
         },
       });
       return this.signToken(user.id, user.name);
@@ -57,11 +58,15 @@ export class SSOService {
     });
     const verified = await argon.verify(user.password, dto.password);
     if (!verified) throw new UnauthorizedException('Wrong Password!');
+    const hashPassword = dto.newPassword
+      ? await argon.hash(dto.newPassword)
+      : user.password;
+    const newEmail = dto.email ? dto.email : user.email;
     const instance = await this.model.user.update({
       where: { name: dto.name },
       data: {
-        password: await argon.hash(dto.newPassword),
-        email: dto.email,
+        password: hashPassword,
+        email: newEmail,
       },
     });
     const { id, cashBalance, name, email } = instance;

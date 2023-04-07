@@ -19,7 +19,7 @@ export class UserDto {
 
   @IsEmail()
   @IsOptional()
-  email: string;
+  email?: string;
 }
 
 // used to change password
@@ -33,7 +33,7 @@ export class UserPasswordDto {
   password: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   newPassword: string;
 
   @IsEmail()

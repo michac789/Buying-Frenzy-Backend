@@ -39,9 +39,11 @@ export class SSOController {
    * [POST] /sso/login/
    * Login with name and password.
    * Return 200 if success, with the signed access token.
+   * Return 400 if it does not satisfy dto constraint.
    * Return 401 unauthorized if name or password is wrong.
    */
   @Post('login')
+  @HttpCode(200)
   login(@Body() dto: UserDto): Promise<{ access_token: string }> {
     return this.ssoService.login(dto);
   }
@@ -75,6 +77,7 @@ export class SSOController {
    * [DELETE] /sso/user/
    * Given user name and correct password, delete the account.
    * Return 204 if success.
+   * Return 400 if it does not satisfy dto constraint.
    * Return 401 if not logged in, or if password does not match.
    */
   @Delete('user')
