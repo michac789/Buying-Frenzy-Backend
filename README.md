@@ -1,73 +1,194 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Glints Technical Assigment (Backend) - Buying Frenzy
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Table of contents:
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+- Overview
+- Database Schema Documentation
+- Complete API Documentation
+- Main Operations Approach & Remarks
+- How To Run
+- Testing
 
-## Description
+## Overview
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Complete functional backend application created using NodeJS and NestJS Framework.
 
-## Installation
+TODO
 
-```bash
-$ yarn install
-```
+## Database Schema Documentation
 
-## Running the app
+TODO
 
-```bash
-# development
-$ yarn run start
+## Complete API Documentation
 
-# watch mode
-$ yarn run start:dev
+### `[POST] /sso/register/`
 
-# production mode
-$ yarn run start:prod
-```
+Register (create) new user, need unique name and password.
+Return 201 if success, with the signed access token.
+Return 400 if it does not satisfy dto constraint.
+Return 409 if conflict (no duplicate name allowed).
 
-## Test
+### `[POST] /sso/login/`
 
-```bash
-# unit tests
-$ yarn run test
+Login with name and password.
+Return 200 if success, with the signed access token.
+Return 400 if it does not satisfy dto constraint.
+Return 401 unauthorized if name or password is wrong.
 
-# e2e tests
-$ yarn run test:e2e
+### `[GET] /sso/user/`
 
-# test coverage
-$ yarn run test:cov
-```
+Get profile info (id, name, email, cashBalance) of the requesting user.
+Return 200 if success, with profile information.
+Return 401 if not logged in.
 
-## Support
+### `[PUT] /sso/user/`
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Allows you to change your password and email, given old password.
+Return 200 if success.
+Return 400 if it does not satisfy dto constraint.
+Return 401 if not logged in, or if password does not match.
 
-## Stay in touch
+### `[DELETE] /sso/user/`
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Given user name and correct password, delete the account.
+Return 204 if success.
+Return 400 if it does not satisfy dto constraint.
+Return 401 if not logged in, or if password does not match.
 
-## License
+### `[POST] /sso/user/topup/`
 
-Nest is [MIT licensed](LICENSE).
+Topup (increase) the cash balance of a user.
+Note: realistically, you should integrate this with 3rd party API to make payment
+For the sake of this sample, it is assumed you already make the necessary payment
+Increase current user cashBalance by 'additionalCashBalance'
+Return 201 if topup success.
+Return 400 if body does not satisfy dto constraint.
+Return 401 if not logged in.
+
+### `[GET] /restaurant/`
+
+Get all restaurants without its menu list, with filter and pagination.
+Query Params:
+
+- datetime (format DD/MM/YYYY/HH:MM): filter restaurant that are open at that datetime
+- itemsperpage (positive integer): returns 'itemsperpage' restaurants (pagination), by default 10, returning all restaurant at once is too heavy
+- page (positive integer): display page number 'page', by default 1
+- pricelte (non-negative number): 'price less than or equal to' filter, default 999999 (arbirary large num)
+- pricegte (non-negative number): 'price greater than or equal to' filter, default 0
+- dishlte (positive integer): 'dish count less than or equal to' filter, default 1000 (arbirary large)
+- dishgte (positive integer): 'dish count grater than or equal to' filter, default 1
+- sort (boolean): sort alphabetically if true, default false
+
+Return 200 if success, with pagination info (total pages, whether next/prev page exist)
+Return 400 if any optional query params format is invalid.
+
+### `[GET] /restaurant/search/`
+
+Requires 'q' query parameter for search query, optional pagination similar to above.
+Get restaurants in descending order or relevance (by Jaro Winkler algo).
+Return 200 if success, with relevance for each restaurant & pagination info.
+Return 400 if any optional query params format is invalid.
+
+### `[POST] /restaurant/`
+
+Create a new restaurant instance, cashBalance defaulted to 0, the user who makes the request becomes the restaurant owner (user).
+Return 201 if success, with the new created instance.
+Return 401 if not logged in.
+Return 400 if it does not satisfy dto constraint.
+Return 409 if conflict (same restaurantName).
+
+### `[GET] /restaurant/:id/`
+
+Get a restaurant instance (including all menu), given its id.
+Return 200 if success, with the restaurant instance and all menu in that restaurant.
+Return 404 if instance not found (invalid id).
+
+### `[POST] /restaurant/:id/`
+
+Create a menu with a foreign key to a restaurant instance.
+Return 201 if success, with the new created instance.
+Return 401 if not logged in.
+Return 400 if it does not satisfy dto constraint.
+Return 403 if not restaurant owner.
+Return 404 if instance not found (invalid id).
+
+### `[PUT] /restaurant/:id/`
+
+Update existing restaurant instance, given its id.
+Return 200 if success, with the new updated instance.
+Return 401 if not logged in.
+Return 400 if it does not satisfy dto constraint.
+Return 403 if not restaurant owner.
+Return 404 if instance not found (invalid id).
+
+### `[DELETE] /restaurant/:id/`
+
+Delete existing restaurant instance, given its id.
+Return 204 if success.
+Return 401 if not logged in.
+Return 404 if instance not found (invalid id).
+Return 403 if not restaurant owner.
+
+### `[PUT] /restaurant/:id/`
+
+Update existing menu instance, given its id.
+Return 200 if success, with the new updated instance.
+Return 401 if not logged in.
+Return 400 if it does not satisfy dto constraint.
+Return 403 if not restaurant owner of current dish.
+Return 404 if instance not found (invalid id).
+
+### `[DELETE] /menu/:id/`
+
+Delete existing menu instance, given its id.
+Return 204 if success, with the new created instance.
+Return 401 if not logged in.
+Return 404 if instance not found (invalid id).
+Return 403 if not restaurant owner of current dish.
+
+### `[POST] /purchase/`
+
+Create multiple purchases at once, requires a list of (menuId-quantity) object.
+Add appropriate cash balance to restaurant, decrease from user.
+Return 201 if success, with the purchase instances created.
+Return 401 if not logged in.
+Return 400 if it does not satisfy dto constraint, or if store currently closed.
+Return 404 if any of the menuId is invalid.
+Return 402 if cash balance insufficient.
+
+### `[POST] /sample/populate/`
+
+Populate database with given sample data.
+It is an async function, it will run for a few seconds after you get the response.
+
+### `[DELETE] /sample/reset/`
+
+Delete all data in the database.
+Note that it does not reset the id count back to 1 again.
+It is an async function, it will run for a few seconds after you get the response.
+
+## Main Operations Approach & Remarks
+
+TODO
+
+## How To Run
+
+1. Clone the repository, make sure you have node (v18.x is recommended) installed, and prefarably yarn as package manager
+
+2. Install all dependencies with `yarn install`
+
+3. Run database using docker with the command `docker compose up db` (by default setup at port 5432)
+
+4. Install prisma cli, then you can type `npx prisma migrate dev` to makemigrations and migrate changes to the database
+
+5. Type `yarn start` to start main server, by default hosted in port 3000, or you can run `yarn start:dev` to watch for changes and automatically restart the server if there are any changes
+
+6. Using postman or other similar tools, you can create a POST request to the endpoint: `/sample/populate/`, which will automatically populate your database. Please do this only ONCE, it should take up to a minute (the process is asynchronous, even if you have received the response, the database population should take a moment)
+
+7. You can run `npx prisma studio` to host an admin page with UI to view and navigate through the database, by default hosted in port 5555
+
+8. Type `yarn test` to run all test cases, or you can try manually requesting the APIs
+
+## Testing
+
+TODO - put testing results here
