@@ -33,7 +33,7 @@ export class UserPasswordDto {
   password: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   newPassword: string;
 
   @IsEmail()

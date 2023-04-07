@@ -77,6 +77,7 @@ export class SSOController {
    * [DELETE] /sso/user/
    * Given user name and correct password, delete the account.
    * Return 204 if success.
+   * Return 400 if it does not satisfy dto constraint.
    * Return 401 if not logged in, or if password does not match.
    */
   @Delete('user')
