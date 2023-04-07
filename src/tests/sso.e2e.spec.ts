@@ -1,12 +1,9 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import * as pactum from 'pactum';
-import { AppModule } from './app.module';
-import { ModelService } from './model/model.service';
-import { PrismaClient } from '@prisma/client';
+import { AppModule } from '../app.module';
+import { ModelService } from '../model/model.service';
 import * as argon from 'argon2';
 import * as request from 'supertest';
-import { send } from 'process';
 
 describe('App SSO e2e', () => {
   let app: INestApplication;
@@ -30,6 +27,8 @@ describe('App SSO e2e', () => {
     model = app.get(ModelService);
     await model.cleanDb();
   });
+
+  afterAll(async () => await model.cleanDb());
 
   describe('sso', () => {
     describe('register', () => {
@@ -119,9 +118,9 @@ describe('App SSO e2e', () => {
         const response = await request(app.getHttpServer())
           .post(registerEndpoint)
           .send(sendData);
-        // expect(response.status).toBe(201);
+        expect(response.status).toBe(201);
         // should return access token and be logged in directly
-        expect(response.body).toHaveProperty('access_token');
+        expect(response.body).toHaveProperty('accessToken');
         // verify that the instance is indeed created in the database
         const createdUser = await model.user.findUnique({
           where: { name: sendData.name },
@@ -225,26 +224,25 @@ describe('App SSO e2e', () => {
           .post(loginEndpoint)
           .send(sendData);
         expect(response.status).toBe(200);
-        expect(response.body).toHaveProperty('access_token');
+        expect(response.body).toHaveProperty('accessToken');
       });
     });
 
     describe('user', () => {
-      const registerEndpoint = '/sso/user/';
+      const userEndpoint = '/sso/user/';
       const loginEndpoint = '/sso/login/';
+      let accessToken: string;
 
       it('[GET] Return 401 if not logged in (no bearer token)', async () => {
-        const response = await request(app.getHttpServer()).get(
-          registerEndpoint,
-        );
+        const response = await request(app.getHttpServer()).get(userEndpoint);
         expect(response.status).toBe(401);
       });
 
       it('[GET] Return 401 if wrong bearer token (or expired)', async () => {
-        const accessToken = '12345'; // arbitary wrong token
+        const wrongToken = '12345'; // arbitary wrong token
         const response = await request(app.getHttpServer())
-          .get(registerEndpoint)
-          .set('Authorization', `Bearer ${accessToken}`);
+          .get(userEndpoint)
+          .set('Authorization', `Bearer ${wrongToken}`);
         expect(response.status).toBe(401);
       });
 
@@ -256,9 +254,9 @@ describe('App SSO e2e', () => {
         const responseToken = await request(app.getHttpServer())
           .post(loginEndpoint)
           .send(sendData);
-        const accessToken = responseToken.body.access_token;
+        accessToken = responseToken.body.accessToken;
         const response = await request(app.getHttpServer())
-          .get(registerEndpoint)
+          .get(userEndpoint)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(response.status).toBe(200);
         expect(response.body.cashBalance.toString()).toBe('0');
@@ -273,115 +271,76 @@ describe('App SSO e2e', () => {
           newPassword: '12345',
         };
         const response = await request(app.getHttpServer())
-          .put(registerEndpoint)
+          .put(userEndpoint)
           .send(sendData);
         expect(response.status).toBe(401);
       });
 
       it('[PUT] Return 401 if wrong original password entered', async () => {
-        const sendDataCredentials = {
-          name: 'michael',
-          password: '123',
-        };
-        const responseToken = await request(app.getHttpServer())
-          .post(loginEndpoint)
-          .send(sendDataCredentials);
-        const accessToken = responseToken.body.access_token;
         const sendData = {
           name: 'michael',
           password: 'asfsdfa', // wrong original password
           newPassword: '12345',
         };
         const response = await request(app.getHttpServer())
-          .put(registerEndpoint)
+          .put(userEndpoint)
           .send(sendData)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(response.status).toBe(401);
       });
 
       it('[PUT] Return 400 if name is missing or empty string', async () => {
-        const sendDataCredentials = {
-          name: 'michael',
-          password: '123',
-        };
-        const responseToken = await request(app.getHttpServer())
-          .post(loginEndpoint)
-          .send(sendDataCredentials);
-        const accessToken = responseToken.body.access_token;
         const sendData = {
           name: '',
           password: '123',
           newPassword: '12345',
         };
         const response = await request(app.getHttpServer())
-          .put(registerEndpoint)
+          .put(userEndpoint)
           .send(sendData)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(response.status).toBe(400);
-        console.log(response.body);
       });
 
       it('[PUT] Return 400 if password (original) is missing or empty string', async () => {
-        const sendDataCredentials = {
-          name: 'michael',
-          password: '123',
-        };
-        const responseToken = await request(app.getHttpServer())
-          .post(loginEndpoint)
-          .send(sendDataCredentials);
-        const accessToken = responseToken.body.access_token;
         const sendData = {
           name: 'michael',
           newPassword: '123',
         };
         const response = await request(app.getHttpServer())
-          .put(registerEndpoint)
+          .put(userEndpoint)
           .send(sendData)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(response.status).toBe(400);
-        console.log(response.body);
       });
 
       it('[PUT] Return 200 if change password success', async () => {
-        const sendDataCredentials = {
-          name: 'michael',
-          password: '123',
-        };
-        const responseToken = await request(app.getHttpServer())
-          .post(loginEndpoint)
-          .send(sendDataCredentials);
-        const accessToken = responseToken.body.access_token;
         const sendData = {
           name: 'michael',
           password: '123',
           newPassword: '12345',
         };
         const response = await request(app.getHttpServer())
-          .put(registerEndpoint)
+          .put(userEndpoint)
           .send(sendData)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(response.status).toBe(200);
         const user = await model.user.findUnique({
           where: { name: 'michael' },
         });
+        // check that the password stores is already hashed
+        expect(user.password).not.toBe('12345');
+        expect(user.password.length).toBeGreaterThan(20);
       });
 
       it('[PUT] Return 200 if change email success, check database change', async () => {
-        const sendDataCredentials = {
-          name: 'michael',
-          password: '12345',
-        };
-        const responseToken = await request(app.getHttpServer())
-          .post(loginEndpoint)
-          .send(sendDataCredentials);
-        const accessToken = responseToken.body.access_token;
         const sendData = {
           name: 'michael',
           password: '12345',
           email: 'mich0107@e.ntu.edu.sg',
         };
         const response = await request(app.getHttpServer())
-          .put(registerEndpoint)
+          .put(userEndpoint)
           .send(sendData)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(response.status).toBe(200);
@@ -397,7 +356,7 @@ describe('App SSO e2e', () => {
           password: '12345',
         };
         const response = await request(app.getHttpServer())
-          .delete(registerEndpoint)
+          .delete(userEndpoint)
           .send(sendData);
         expect(response.status).toBe(401);
       });
@@ -410,65 +369,41 @@ describe('App SSO e2e', () => {
         const responseToken = await request(app.getHttpServer())
           .post(loginEndpoint)
           .send(sendDataCredentials);
-        const accessToken = responseToken.body.access_token;
+        const accessToken = responseToken.body.accessToken;
         const sendData = {
           name: 'michael',
           password: '123', // was already changed to 12345
         };
         const response = await request(app.getHttpServer())
-          .delete(registerEndpoint)
+          .delete(userEndpoint)
           .send(sendData)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(response.status).toBe(401);
       });
 
       it('[DELETE] Return 400 if name is missing or empty string', async () => {
-        const sendDataCredentials = {
-          name: 'michael',
-          password: '12345',
-        };
-        const responseToken = await request(app.getHttpServer())
-          .post(loginEndpoint)
-          .send(sendDataCredentials);
-        const accessToken = responseToken.body.access_token;
         const sendData = {
           password: '12345',
         };
         const response = await request(app.getHttpServer())
-          .delete(registerEndpoint)
+          .delete(userEndpoint)
           .send(sendData)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(response.status).toBe(400);
       });
 
       it('[DELETE] Return 400 if password is missing or empty string', async () => {
-        const sendDataCredentials = {
-          name: 'michael',
-          password: '12345',
-        };
-        const responseToken = await request(app.getHttpServer())
-          .post(loginEndpoint)
-          .send(sendDataCredentials);
-        const accessToken = responseToken.body.access_token;
         const sendData = {
           name: 'michael',
         };
         const response = await request(app.getHttpServer())
-          .delete(registerEndpoint)
+          .delete(userEndpoint)
           .send(sendData)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(response.status).toBe(400);
       });
 
       it('[DELETE] Return 204 and delete this user when success', async () => {
-        const sendDataCredentials = {
-          name: 'michael',
-          password: '12345',
-        };
-        const responseToken = await request(app.getHttpServer())
-          .post(loginEndpoint)
-          .send(sendDataCredentials);
-        const accessToken = responseToken.body.access_token;
         // user exist initially
         const createdUser1 = await model.user.findUnique({
           where: { name: 'michael' },
@@ -480,7 +415,7 @@ describe('App SSO e2e', () => {
           password: '12345',
         };
         const response = await request(app.getHttpServer())
-          .delete(registerEndpoint)
+          .delete(userEndpoint)
           .send(sendData)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(response.status).toBe(204);
@@ -492,22 +427,72 @@ describe('App SSO e2e', () => {
       });
     });
 
-    // TODO - topup test
-    // test 401 unauthorized
-    // test 400 missing body
-    // test 400 not a number
-    // test 400 negative value
-    // test 201, make sure balance increases
+    describe('user/topup', () => {
+      const topupEndpoint = '/sso/user/topup/';
+      const loginEndpoint = '/sso/login/';
+      let accessToken: string;
 
-    // describe('userProfile2TODO', () => {
-    //   const registerEndpoint = '/sso/user/';
+      it('[POST] Return 401 if not logged in (no bearer token)', async () => {
+        await model.user.create({
+          data: {
+            cashBalance: 1.02,
+            name: 'michael',
+            password: await argon.hash('123'),
+          },
+        });
+        const response = await request(app.getHttpServer()).post(topupEndpoint);
+        expect(response.status).toBe(401);
+      });
 
-    //   it('Return 401 if not logged in (no bearer token)', async () => {
-    //     const response = await request(app.getHttpServer()).post(
-    //       registerEndpoint,
-    //     );
-    //     expect(response.status).toBe(401);
-    //   });
-    // });
+      it('[POST] Return 400 if no additionalCashBalance body', async () => {
+        const sendDataCredentials = {
+          name: 'michael',
+          password: '123',
+        };
+        const responseToken = await request(app.getHttpServer())
+          .post(loginEndpoint)
+          .send(sendDataCredentials);
+        accessToken = responseToken.body.accessToken;
+        const sendData = {};
+        const response = await request(app.getHttpServer())
+          .post(topupEndpoint)
+          .send(sendData)
+          .set('Authorization', `Bearer ${accessToken}`);
+        expect(response.status).toBe(400);
+      });
+
+      it('[POST] Return 400 if additionalCashBalance is not a number', async () => {
+        const sendData = { additionalCashBalance: 'abcde' };
+        const response = await request(app.getHttpServer())
+          .post(topupEndpoint)
+          .send(sendData)
+          .set('Authorization', `Bearer ${accessToken}`);
+        expect(response.status).toBe(400);
+      });
+
+      it('[POST] Return 400 if additionalCashBalance is negative values', async () => {
+        const sendData = { additionalCashBalance: '-12' };
+        const response = await request(app.getHttpServer())
+          .post(topupEndpoint)
+          .send(sendData)
+          .set('Authorization', `Bearer ${accessToken}`);
+        expect(response.status).toBe(400);
+      });
+
+      it('[POST] Return 200 if valid, make sure the cashBalance increases appropriately', async () => {
+        const sendData = { additionalCashBalance: 5.65 };
+        const response = await request(app.getHttpServer())
+          .post(topupEndpoint)
+          .send(sendData)
+          .set('Authorization', `Bearer ${accessToken}`);
+        console.log(response.body);
+        expect(response.status).toBe(200);
+        // assert that cashBalance increases by correct amount
+        const user = await model.user.findUnique({
+          where: { name: 'michael' },
+        });
+        expect(user.cashBalance.toString()).toBe('6.67');
+      });
+    });
   });
 });

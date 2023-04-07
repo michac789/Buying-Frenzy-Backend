@@ -22,9 +22,26 @@ export function paginate(qs: any, itemsPerPage: number, page: number): any {
 // TODO
 // given dateTime and openingHours, return if store is open at dateTime or not
 export function isStoreOpen(dateTime: Date, openingHours: string): boolean {
-  const weekdays = ['Sun', 'Mon', 'Tues', 'Weds', 'Thurs', 'Fri', 'Sat'];
-  // TODO
-  return true;
+  const dayRanges: string[] = openingHours.split(' / ');
+  const dayIntervals: { [key: string]: string[] } = {};
+  for (const dayRange of dayRanges) {
+    const [days, interval] = dayRange.split(' ');
+    const daysList = days.split(',');
+    for (const day of daysList) {
+      dayIntervals[day] = interval.split('-');
+    }
+  }
+  const dayOfWeek = ['Sun', 'Mon', 'Tues', 'Weds', 'Thurs', 'Fri', 'Sat'][
+    dateTime.getDay()
+  ];
+  const time = dateTime.toLocaleTimeString([], { hour12: false });
+  const intervals = dayIntervals[dayOfWeek];
+  if (!intervals) return false;
+  for (const interval of intervals) {
+    const [start, end] = interval.split('-');
+    if (start <= time && time <= end) return true;
+  }
+  return false;
 }
 
 // https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance

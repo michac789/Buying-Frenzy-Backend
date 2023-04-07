@@ -19,7 +19,7 @@ import { User } from '@prisma/client';
 export class SSOService {
   constructor(private model: ModelService, private jwt: JwtService) {}
 
-  async register(dto: UserDto): Promise<{ access_token: string }> {
+  async register(dto: UserDto): Promise<{ accessToken: string }> {
     try {
       const user = await this.model.user.create({
         data: {
@@ -37,7 +37,7 @@ export class SSOService {
     }
   }
 
-  async login(dto: UserDto): Promise<{ access_token: string }> {
+  async login(dto: UserDto): Promise<{ accessToken: string }> {
     const user = await this.model.user.findUnique({
       where: {
         name: dto.name,
@@ -102,7 +102,7 @@ export class SSOService {
   async signToken(
     userId: number,
     name: string,
-  ): Promise<{ access_token: string }> {
+  ): Promise<{ accessToken: string }> {
     const payload = {
       sub: userId,
       name,
@@ -111,6 +111,6 @@ export class SSOService {
       expiresIn: '60m', // have to login again to get new token after 60 minutes
       secret: '123456', // use more complex string and env variable in real production!
     });
-    return { access_token: token };
+    return { accessToken: token };
   }
 }
