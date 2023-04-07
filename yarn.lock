@@ -3266,6 +3266,13 @@ jest-message-util@^29.5.0:
     slash "^3.0.0"
     stack-utils "^2.0.3"
 
+jest-mock-extended@^3.0.4:
+  version "3.0.4"
+  resolved "https://registry.yarnpkg.com/jest-mock-extended/-/jest-mock-extended-3.0.4.tgz#12a5f993d27aa46232012c439a9b7c54f3b0a1fd"
+  integrity sha512-2ynEZ7IEJNrhrgshklDMhrOdnmW4Nt+PhkyRqZxRgpwMo7JjmFWMzyp0+eSyk+H9KK1QjXI5xTZIw6x7cVDcRg==
+  dependencies:
+    ts-essentials "^7.0.3"
+
 jest-mock@^29.5.0:
   version "29.5.0"
   resolved "https://registry.yarnpkg.com/jest-mock/-/jest-mock-29.5.0.tgz#26e2172bcc71d8b0195081ff1f146ac7e1518aed"
@@ -4234,6 +4241,11 @@ pretty-format@^29.0.0, pretty-format@^29.5.0:
     ansi-styles "^5.0.0"
     react-is "^18.0.0"
 
+prisma-mock@^0.5.5:
+  version "0.5.5"
+  resolved "https://registry.yarnpkg.com/prisma-mock/-/prisma-mock-0.5.5.tgz#d67f9672f03b946c1fcef1254af49a0fd452ea7b"
+  integrity sha512-nz6ovZXVHHZxK7lEHPufPH/L2tFuzQnL/hl8nmIRYPWV6Rt2tgdSujhT0tyRFNNUXpjuLAbe7so3ABh5eCGXxg==
+
 prisma@^4.12.0:
   version "4.12.0"
   resolved "https://registry.yarnpkg.com/prisma/-/prisma-4.12.0.tgz#1080eda951928cb3b0274ad29da9ae4f93143d68"
@@ -4861,6 +4873,11 @@ trouter@^2.0.1:
   integrity sha512-kr8SKKw94OI+xTGOkfsvwZQ8mWoikZDd2n8XZHjJVZUARZT+4/VV6cacRS6CLsH9bNm+HFIPU1Zx4CnNnb4qlQ==
   dependencies:
     matchit "^1.0.0"
+
+ts-essentials@^7.0.3:
+  version "7.0.3"
+  resolved "https://registry.yarnpkg.com/ts-essentials/-/ts-essentials-7.0.3.tgz#686fd155a02133eedcc5362dc8b5056cde3e5a38"
+  integrity sha512-8+gr5+lqO3G84KdiTSMRLtuyJ+nTBVRKuCrK4lidMPdVeEp0uqC875uE5NMcaA7YYMN7XsNiFQuMvasF8HT/xQ==
 
 ts-jest@29.0.5:
   version "29.0.5"
