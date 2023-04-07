@@ -40,6 +40,11 @@ export class RestaurantController {
    * ?datetime=DD/MM/YYYY/HH:MM -> filter restaurant that are open at that datetime
    * ?itemsperpage=x -> display x items per page, by default 10
    * ?page=y -> display page y, by default 1
+   * ?pricelte -> 'price less than or equal to' filter, default 999999 (arbirary large num)
+   * ?pricegte -> 'price greater than or equal to' filter, default 0
+   * ?dishlte -> 'dish count less than or equal to' filter, default 10000 (arbirary large)
+   * ?dishgte -> 'dish count grater than or equal to' filter, default 1
+   * ?sort -> sort alphabetically if true, default false
    * Return 200 if success, with pagination info (total pages, whether next/prev page exist)
    * Return 400 if any optional query params format is invalid.
    */
@@ -103,7 +108,6 @@ export class RestaurantController {
    * Return 400 if it does not satisfy dto constraint.
    * Return 403 if not restaurant owner.
    * Return 404 if instance not found (invalid id).
-   * TODO - do not allow dish name to be the same in the same resto?
    */
   @Post(':id')
   @UseGuards(JwtGuard)
