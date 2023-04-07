@@ -31,7 +31,7 @@ export class SSOController {
    * Return 409 if conflict (no duplicate name allowed).
    */
   @Post('register')
-  register(@Body() dto: UserDto): Promise<{ access_token: string }> {
+  register(@Body() dto: UserDto): Promise<{ accessToken: string }> {
     return this.ssoService.register(dto);
   }
 
@@ -44,7 +44,7 @@ export class SSOController {
    */
   @Post('login')
   @HttpCode(200)
-  login(@Body() dto: UserDto): Promise<{ access_token: string }> {
+  login(@Body() dto: UserDto): Promise<{ accessToken: string }> {
     return this.ssoService.login(dto);
   }
 
@@ -93,12 +93,13 @@ export class SSOController {
    * Note: realistically, you should integrate this with 3rd party API to make payment
    * For the sake of this sample, it is assumed you already make the necessary payment
    * Increase current user cashBalance by 'additionalCashBalance'
-   * Return 201 if topup success.
+   * Return 200 if topup success, update appropriate balance in database.
    * Return 400 if body does not satisfy dto constraint.
    * Return 401 if not logged in.
    */
   @Post('user/topup')
   @UseGuards(JwtGuard)
+  @HttpCode(200)
   topUp(
     @Body() dto: UserBalanceDto,
     @GetUser() user: User,
