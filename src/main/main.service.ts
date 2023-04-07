@@ -7,7 +7,7 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { ModelService } from 'src/model/model.service';
+import { ModelService } from '../model/model.service';
 import { Restaurant, Menu, User, PurchaseHistory } from '@prisma/client';
 import {
   RestaurantDto,

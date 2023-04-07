@@ -17,8 +17,7 @@ import {
   MenuService,
   PurchaseService,
 } from './main.service';
-import { JwtGuard } from 'src/auth/sso.utils';
-import { GetUser } from 'src/auth/sso.utils';
+import { JwtGuard, GetUser } from '../auth/sso.utils';
 import { User } from '@prisma/client';
 import {
   RestaurantDto,

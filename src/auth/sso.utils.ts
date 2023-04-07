@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ModelService } from 'src/model/model.service';
+import { ModelService } from '../model/model.service';
 import { AuthGuard } from '@nestjs/passport';
 import { User } from '@prisma/client';
 

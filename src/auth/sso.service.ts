@@ -12,7 +12,7 @@ import {
   UserPasswordDto,
   UserSafeType,
 } from './dto/user.dto';
-import { ModelService } from 'src/model/model.service';
+import { ModelService } from '../model/model.service';
 import { User } from '@prisma/client';
 
 @Injectable()
@@ -26,6 +26,7 @@ export class SSOService {
           cashBalance: 0,
           name: dto.name,
           password: await argon.hash(dto.password),
+          email: dto.email,
         },
       });
       return this.signToken(user.id, user.name);
