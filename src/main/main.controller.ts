@@ -88,6 +88,18 @@ export class RestaurantController {
   }
 
   /**
+   * [GET] /restaurant/me/
+   * Get all restaurants created by the requesting user.
+   * Return 200 if success, including all restaurant info except for menus.
+   * Return 401 if not logged in.
+   */
+  @Get('me')
+  @UseGuards(JwtGuard)
+  async ownRestaurantView(@GetUser() user: User) {
+    return this.service.getRestaurantByOwner(user);
+  }
+
+  /**
    * [GET] /restaurant/:id/
    * Get a restaurant instance (including all menu), given its id.
    * Return 200 if success, with the restaurant instance and all menu in that restaurant.

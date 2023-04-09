@@ -221,6 +221,12 @@ export class RestaurantService {
       },
     });
   }
+
+  async getRestaurantByOwner(user: User): Promise<Restaurant[]> {
+    return await this.model.restaurant.findMany({
+      where: { ownerId: user.id },
+    });
+  }
 }
 
 @Injectable({})

@@ -185,6 +185,26 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
     });
   });
 
+  describe('[GET] /restaurant/me/ (restaurant-list-self)', () => {
+    const restaurantOwnerEndpoint = '/restaurant/me/';
+
+    it('Return 401 if not logged in', async () => {
+      const response = await request(app.getHttpServer()).get(
+        restaurantOwnerEndpoint,
+      );
+      expect(response.status).toBe(401);
+    });
+
+    it('Return 200 if success, with all restaurant instances owned by this user', async () => {
+      const response = await request(app.getHttpServer())
+        .get(restaurantOwnerEndpoint)
+        .set('Authorization', `Bearer ${accessToken1}`);
+      expect(response.status).toBe(200);
+      expect(response.body.length).toBe(1);
+      expect(response.body[0].restaurantName).toBe('newResto');
+    });
+  });
+
   describe('[GET] /restaurant/:id/ (restaurant-detail-get)', () => {
     const getRestaurantDetailEndpoint = (id: number) => `/restaurant/${id}/`;
 
