@@ -157,12 +157,25 @@ export class RestaurantService {
     dto: MenuDto,
     user: User,
   ): Promise<Menu> {
+    // make sure id is valid, if not return 404
     const instance = await this.model.restaurant.findFirst({
       where: { id: restaurantId },
     });
     if (instance === null) throw new NotFoundException();
+    // only for restaurant owner, if not owner return 403
     if (user.id !== instance.ownerId)
       throw new ForbiddenException('Restaurant Owner Required!');
+    // if dishName is duplicated in this restaurant, return 409
+    const menuWithSameDishName = await this.model.menu.findFirst({
+      where: {
+        dishName: dto.dishName,
+        restaurantId: restaurantId,
+      },
+    });
+    if (menuWithSameDishName !== null)
+      throw new ConflictException(
+        'No duplicate dish name allowed in the same restaurant!',
+      );
     return await this.model.menu.create({
       data: {
         restaurant: {
@@ -228,6 +241,16 @@ export class MenuService {
     });
     if (user.id !== restaurant.ownerId)
       throw new ForbiddenException('Restaurant Owner Required!');
+    const menuWithSameDishName = await this.model.menu.findFirst({
+      where: {
+        dishName: dto.dishName,
+        restaurantId: menu.restaurantId,
+      },
+    });
+    if (menuWithSameDishName !== null)
+      throw new ConflictException(
+        'No duplicate dish name allowed in the same restaurant!',
+      );
     return await this.model.menu.update({
       where: { id: menuId },
       data: dto,
