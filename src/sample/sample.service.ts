@@ -10,6 +10,7 @@ import {
   PurchaseHistoryData,
   UserData,
 } from './sample.interface';
+import { convertOpeningHoursString } from './sample.utils';
 
 @Injectable()
 export class SampleService {
@@ -29,7 +30,8 @@ export class SampleService {
   }
 
   async createRestaurantAndMenu(restaurant: RestaurantData, adminId: number) {
-    const { cashBalance, openingHours, restaurantName } = restaurant;
+    let { cashBalance, openingHours, restaurantName } = restaurant;
+    openingHours = convertOpeningHoursString(openingHours);
     const instance = await this.model.restaurant.create({
       data: {
         owner: {

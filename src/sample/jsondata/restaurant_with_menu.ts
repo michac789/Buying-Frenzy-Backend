@@ -1,4 +1,4 @@
-import { RestaurantData } from "../sample.interface";
+import { RestaurantData } from '../sample.interface';
 
 export const restaurantAndMenuData: RestaurantData[] = [
   {
@@ -40419,7 +40419,7 @@ export const restaurantAndMenuData: RestaurantData[] = [
       },
     ],
     openingHours:
-      'Mon-Thu 11 am - 10:30 pm  / Fri 11 am - 11 pm  / Sat 11:30 am - 11 pm  / Sun 4:30 pm - 10:30 pm',
+      'Mon-Thurs 11 am - 10:30 pm  / Fri 11 am - 11 pm  / Sat 11:30 am - 11 pm  / Sun 4:30 pm - 10:30 pm',
     restaurantName: 'Kyoto Sushi',
   },
   {
@@ -58971,7 +58971,7 @@ export const restaurantAndMenuData: RestaurantData[] = [
       },
     ],
     openingHours:
-      'Mon-Thu 11 am - 10 pm  / Fri-Sat 10 am - 10:30 pm  / Sun 11 am - 11 pm',
+      'Mon-Thurs 11 am - 10 pm  / Fri-Sat 10 am - 10:30 pm  / Sun 11 am - 11 pm',
     restaurantName: 'Penang Garden',
   },
   {
@@ -66111,7 +66111,7 @@ export const restaurantAndMenuData: RestaurantData[] = [
         price: 12.5,
       },
     ],
-    openingHours: 'Mon-Thu 11:30 am - 10 pm  / Fri-Sun 11:30 am - 11 pm',
+    openingHours: 'Mon-Thurs 11:30 am - 10 pm  / Fri-Sun 11:30 am - 11 pm',
     restaurantName: 'Rose Pistola',
   },
   {
@@ -74222,7 +74222,7 @@ export const restaurantAndMenuData: RestaurantData[] = [
       },
     ],
     openingHours:
-      'Mon-Wed 5 pm - 12:30 am  / Thu-Fri 5 pm - 1:30 am  / Sat 3 pm - 1:30 am  / Sun 3 pm - 11:30 pm',
+      'Mon-Weds 5 pm - 12:30 am  / Thu-Fri 5 pm - 1:30 am  / Sat 3 pm - 1:30 am  / Sun 3 pm - 11:30 pm',
     restaurantName: 'Sudachi',
   },
   {
@@ -78633,7 +78633,7 @@ export const restaurantAndMenuData: RestaurantData[] = [
       },
     ],
     openingHours:
-      'Mon-Thu 11 am - 11 pm  / Fri-Sat 11 am - 12:30 am  / Sun 10 am - 11 pm',
+      'Mon-Thurs 11 am - 11 pm  / Fri-Sat 11 am - 12:30 am  / Sun 10 am - 11 pm',
     restaurantName: 'The Cheesecake Factory',
   },
   {

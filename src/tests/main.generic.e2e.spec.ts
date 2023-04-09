@@ -5,6 +5,7 @@ import { ModelService } from '../model/model.service';
 import * as argon from 'argon2';
 import * as request from 'supertest';
 import { Menu, Restaurant, User } from '@prisma/client';
+import { IsRequiredDateTimeFormat } from '../main/dto/restaurant.dto';
 
 describe('App Main (Restaurant Generic Endpoints) e2e', () => {
   let app: INestApplication;
@@ -78,7 +79,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
     it('Return 401 if not logged in', async () => {
       const sendData = {
         openingHours:
-          'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 2pm',
+          '10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
         restaurantName: 'newResto',
       };
       sampleUser1;
@@ -89,7 +90,6 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
     });
 
     it('Return 400 if openingHours is not given or empty string', async () => {
-      // note: detailed checking for openingHours string is in seperate unittest
       const sendData = {
         restaurantName: 'newResto',
       };
@@ -103,8 +103,50 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
     it('Return 400 if restaurant name is not given or empty string', async () => {
       const sendData = {
         openingHours:
-          'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 2pm',
+          '10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
         restaurantName: '',
+      };
+      const response = await request(app.getHttpServer())
+        .post(restaurantCreateEndpoint)
+        .set('Authorization', `Bearer ${accessToken1}`)
+        .send(sendData);
+      expect(response.status).toBe(400);
+    });
+
+    it('Return 400 if openingHours is invalid format (case 1)', async () => {
+      // less than 14 hours given
+      const sendData = {
+        openingHours:
+          '10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/10:15/19:45',
+        restaurantName: 'newResto',
+      };
+      const response = await request(app.getHttpServer())
+        .post(restaurantCreateEndpoint)
+        .set('Authorization', `Bearer ${accessToken1}`)
+        .send(sendData);
+      expect(response.status).toBe(400);
+    });
+
+    it('Return 400 if openingHours is invalid format (case 2)', async () => {
+      // invalid hour
+      const sendData = {
+        openingHours:
+          '10:00/21:00/11:00/25:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
+        restaurantName: 'newResto',
+      };
+      const response = await request(app.getHttpServer())
+        .post(restaurantCreateEndpoint)
+        .set('Authorization', `Bearer ${accessToken1}`)
+        .send(sendData);
+      expect(response.status).toBe(400);
+    });
+
+    it('Return 400 if openingHours is invalid format (case 3)', async () => {
+      // invalid delimiter
+      const sendData = {
+        openingHours:
+          '10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00//23:30/10:15/19:45',
+        restaurantName: 'newResto',
       };
       const response = await request(app.getHttpServer())
         .post(restaurantCreateEndpoint)
@@ -116,7 +158,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
     it('Return 201 if success, verify creation, cashBalance initialize to zero, creator is the restaurant owner', async () => {
       const sendData = {
         openingHours:
-          'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 2pm',
+          '10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
         restaurantName: 'newResto',
       };
       const response = await request(app.getHttpServer())
@@ -126,7 +168,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
       expect(response.status).toBe(201);
       expect(response.body.restaurantName).toBe('newResto');
       expect(response.body.openingHours).toBe(
-        'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 2pm',
+        '10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
       );
 
       const newResto = await model.restaurant.findFirst({
@@ -137,7 +179,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
       expect(newResto.cashBalance.toString()).toBe('0'); // cashBalance initially 0 when created
       expect(newResto.restaurantName).toBe('newResto');
       expect(newResto.openingHours).toBe(
-        'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 2pm',
+        '10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
       );
       expect(newResto.ownerId.toString()).toBe(sampleUser1.id.toString()); // automatically assign creator as owner
     });
@@ -162,7 +204,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
         id: sampleRestaurant.id,
         cashBalance: '0',
         openingHours:
-          'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 2pm',
+          '10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
         restaurantName: 'newResto',
         ownerId: sampleUser1.id,
         menus: [],
@@ -435,7 +477,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
     it('Return 401 if not logged in', async () => {
       const sendData = {
         openingHours:
-          'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 2pm',
+          '11:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
         restaurantName: 'newRestoUpdated',
       };
       const response = await request(app.getHttpServer())
@@ -448,7 +490,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
     it('Return 400 if restaurantName not given or empty string', async () => {
       const sendData = {
         openingHours:
-          'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 2pm',
+          '11:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
       };
       const response = await request(app.getHttpServer())
         .put(getRestaurantDetailEndpoint(sampleRestaurant.id))
@@ -471,7 +513,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
     it('Return 404 if restaurant id invalid', async () => {
       const sendData = {
         openingHours:
-          'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 2pm',
+          '11:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
         restaurantName: 'newRestoUpdated',
       };
       const response = await request(app.getHttpServer())
@@ -484,7 +526,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
     it('Return 403 if you are not the restaurant owner (only owner can update restaurant details)', async () => {
       const sendData = {
         openingHours:
-          'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 2pm',
+          '11:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
         restaurantName: 'newRestoUpdated',
       };
       const response = await request(app.getHttpServer())
@@ -497,7 +539,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
     it('Return 200 if update successful', async () => {
       const sendData = {
         openingHours:
-          'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 3pm',
+          '11:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
         restaurantName: 'newRestoUpdated',
       };
       const response = await request(app.getHttpServer())
@@ -513,7 +555,7 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
       expect(updatedResto.id).toBe(response.body.id);
       expect(updatedResto.restaurantName).toBe('newRestoUpdated');
       expect(updatedResto.openingHours).toBe(
-        'Mon, Tues 10am - 9pm / Weds - Fri 10am - 7pm / Sat 10am - 3pm',
+        '11:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45',
       );
     });
   });

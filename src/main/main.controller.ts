@@ -107,8 +107,8 @@ export class RestaurantController {
    * Return 401 if not logged in.
    * Return 400 if it does not satisfy dto constraint.
    * Return 403 if not restaurant owner.
-   * Return 409 if dish name is duplicated in the same restaurant.
    * Return 404 if instance not found (invalid id).
+   * Return 409 if dish name is duplicated in the same restaurant.
    */
   @Post(':id')
   @UseGuards(JwtGuard)
