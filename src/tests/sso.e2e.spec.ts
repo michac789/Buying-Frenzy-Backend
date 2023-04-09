@@ -485,7 +485,6 @@ describe('App SSO e2e', () => {
           .post(topupEndpoint)
           .send(sendData)
           .set('Authorization', `Bearer ${accessToken}`);
-        console.log(response.body);
         expect(response.status).toBe(200);
         // assert that cashBalance increases by correct amount
         const user = await model.user.findUnique({

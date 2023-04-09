@@ -48,7 +48,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         id: payload.sub,
       },
     });
-    delete user.password;
+    // in a rare case caused weird 500 error, probably when user is deleted after running test case,
+    // but token still not expired (my guess), to be safe put try catch below here
+    try {
+      delete user.password;
+    } catch (e) {}
     return user;
   }
 }

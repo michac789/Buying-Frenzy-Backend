@@ -19,29 +19,25 @@ export function paginate(qs: any, itemsPerPage: number, page: number): any {
   };
 }
 
-// TODO
-// given dateTime and openingHours, return if store is open at dateTime or not
+// given dateTime and openingHours, return true if store is open at dateTime else false
 export function isStoreOpen(dateTime: Date, openingHours: string): boolean {
-  const dayRanges: string[] = openingHours.split(' / ');
-  const dayIntervals: { [key: string]: string[] } = {};
-  for (const dayRange of dayRanges) {
-    const [days, interval] = dayRange.split(' ');
-    const daysList = days.split(',');
-    for (const day of daysList) {
-      dayIntervals[day] = interval.split('-');
-    }
-  }
-  const dayOfWeek = ['Sun', 'Mon', 'Tues', 'Weds', 'Thurs', 'Fri', 'Sat'][
-    dateTime.getDay()
+  // get the day of today (mon=0, tue=1, ..., sun=6), hour, min
+  const day = (dateTime.getDay() + 6) % 7;
+  const openingHoursArr = openingHours.split('/');
+  const [currHour, currMin]: number[] = [
+    dateTime.getHours(),
+    dateTime.getMinutes(),
   ];
-  const time = dateTime.toLocaleTimeString([], { hour12: false });
-  const intervals = dayIntervals[dayOfWeek];
-  if (!intervals) return false;
-  for (const interval of intervals) {
-    const [start, end] = interval.split('-');
-    if (start <= time && time <= end) return true;
-  }
-  return false;
+  const [openHour, openMin]: number[] = openingHoursArr[day * 2]
+    .split(':')
+    .map((x) => parseInt(x));
+  const [closeHour, closeMin]: number[] = openingHoursArr[day * 2 + 1]
+    .split(':')
+    .map((x) => parseInt(x));
+  return (
+    (currHour > openHour || (currHour == openHour && currMin >= openMin)) &&
+    (currHour < closeHour || (currHour == closeHour && currMin <= closeMin))
+  );
 }
 
 // https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance

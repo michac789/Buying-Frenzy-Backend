@@ -88,6 +88,18 @@ export class RestaurantController {
   }
 
   /**
+   * [GET] /restaurant/me/
+   * Get all restaurants created by the requesting user.
+   * Return 200 if success, including all restaurant info except for menus.
+   * Return 401 if not logged in.
+   */
+  @Get('me')
+  @UseGuards(JwtGuard)
+  async ownRestaurantView(@GetUser() user: User) {
+    return this.service.getRestaurantByOwner(user);
+  }
+
+  /**
    * [GET] /restaurant/:id/
    * Get a restaurant instance (including all menu), given its id.
    * Return 200 if success, with the restaurant instance and all menu in that restaurant.
@@ -108,6 +120,7 @@ export class RestaurantController {
    * Return 400 if it does not satisfy dto constraint.
    * Return 403 if not restaurant owner.
    * Return 404 if instance not found (invalid id).
+   * Return 409 if dish name is duplicated in the same restaurant.
    */
   @Post(':id')
   @UseGuards(JwtGuard)
@@ -162,15 +175,16 @@ export class MenuController {
   constructor(private service: MenuService) {}
 
   /**
-   * [PUT] /restaurant/:id/
+   * [PUT] /menu/:id/
    * Update existing menu instance, given its id.
    * Return 200 if success, with the new updated instance.
    * Return 401 if not logged in.
    * Return 400 if it does not satisfy dto constraint.
-   * Return 403 if not restaurant owner of current dish.
    * Return 404 if instance not found (invalid id).
+   * Return 403 if not restaurant owner of current dish.
+   * Return 409 if dish name already exist in the same restaurant.
    */
-  @Put()
+  @Put(':id')
   @UseGuards(JwtGuard)
   async updateView(
     @Param('id', ParseIntPipe) menuId: number,
