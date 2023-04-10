@@ -1,13 +1,13 @@
 // File to put extra utility functions
 import { BadRequestException } from '@nestjs/common';
-import { RestaurantPaginator } from './dto/restaurant.dto';
+import { RestaurantSearchPaginator } from './dto/restaurant.dto';
 
 // Given a queryset (array of data), itemsPerPage, page, perform pagination
 export function paginate(
   qs: any,
   itemsPerPage: number,
   page: number,
-): RestaurantPaginator {
+): RestaurantSearchPaginator {
   if (qs.length == 0)
     return {
       items: qs,
@@ -28,7 +28,7 @@ export function paginate(
     items: qs,
     pagination: {
       totalPages: numPages,
-      totalItems: qs.length,
+      totalItems: totalItems,
       hasNext: page < numPages,
       hasPrev: page > 1,
     },
@@ -50,6 +50,8 @@ export function isStoreOpen(dateTime: Date, openingHours: string): boolean {
   const [closeHour, closeMin]: number[] = openingHoursArr[day * 2 + 1]
     .split(':')
     .map((x) => parseInt(x));
+  if (openHour === 0 && openMin === 0 && closeHour === 0 && closeHour === 0)
+    return false;
   return (
     (currHour > openHour || (currHour == openHour && currMin >= openMin)) &&
     (currHour < closeHour || (currHour == closeHour && currMin <= closeMin))
@@ -59,6 +61,8 @@ export function isStoreOpen(dateTime: Date, openingHours: string): boolean {
 // https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance
 // Jaro Winkler Distance, to calculate relevance between two different string
 export function getRelevance(s1: string, s2: string, p: number = 0.1): number {
+  s1 = s1.toLowerCase();
+  s2 = s2.toLowerCase();
   const len1 = s1.length;
   const len2 = s2.length;
   if (len1 === 0 || len2 === 0) return 0;

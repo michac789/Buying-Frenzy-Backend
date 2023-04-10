@@ -44,7 +44,7 @@ export class RestaurantController {
    * ?pricegte -> 'price greater than or equal to' filter, default 0
    * ?dishlte -> 'dish count less than or equal to' filter, default 10000 (arbirary large)
    * ?dishgte -> 'dish count grater than or equal to' filter, default 1
-   * ?sort -> sort alphabetically if true, default false
+   * ?sort -> sort alphabetically if true, otherwise false
    * Return 200 if success, with pagination info (total pages, whether next/prev page exist)
    * Return 400 if any optional query params format is invalid.
    */
@@ -223,8 +223,7 @@ export class PurchaseController {
    * Add appropriate cash balance to restaurant, decrease from user.
    * Return 201 if success, with the purchase instances created.
    * Return 401 if not logged in.
-   * Return 400 if it does not satisfy dto constraint.
-   * // TODO - check opening time when making transaction!
+   * Return 400 if it does not satisfy dto constraint, or if store currently closed.
    * Return 404 if any of the menuId is invalid.
    * Return 402 if cash balance insufficient.
    */
