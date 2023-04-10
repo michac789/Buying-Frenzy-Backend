@@ -301,6 +301,8 @@ export class PurchaseService {
       totalPrice += menu.price.toNumber() * dto.items[i].quantity;
     }
 
+    // TODO check opening hour, else return 400 if store is closed on current time, change timezone to GMT+8???
+
     // if not enough money from user's balance, return 402
     if (user.cashBalance.toNumber() < totalPrice)
       throw new HttpException('Payment Required', HttpStatus.PAYMENT_REQUIRED);
@@ -311,33 +313,35 @@ export class PurchaseService {
       let menu = await this.model.menu.findFirst({
         where: { id: dto.items[i].menuId },
       });
-      let purchase = await this.model.purchaseHistory.create({
-        data: {
-          menu: {
-            connect: {
-              id: menu.id,
+      for (let j = 0; j < dto.items[i].quantity; j++) {
+        let purchase = await this.model.purchaseHistory.create({
+          data: {
+            menu: {
+              connect: {
+                id: menu.id,
+              },
             },
-          },
-          user: {
-            connect: {
-              id: user.id,
+            user: {
+              connect: {
+                id: user.id,
+              },
             },
+            transactionDate: new Date(),
           },
-          transactionDate: new Date(),
-        },
-      });
-      purchases.push(purchase);
-      const restaurant = await this.model.restaurant.findFirst({
-        where: { id: menu.id },
-      });
-      await this.model.restaurant.update({
-        where: { id: menu.restaurantId },
-        data: {
-          // optimistic locking
-          cashBalance:
-            restaurant.cashBalance.toNumber() + menu.price.toNumber(),
-        },
-      });
+        });
+        purchases.push(purchase);
+        const restaurant = await this.model.restaurant.findFirst({
+          where: { id: menu.restaurantId },
+        });
+        await this.model.restaurant.update({
+          where: { id: menu.restaurantId },
+          data: {
+            // optimistic locking
+            cashBalance:
+              restaurant.cashBalance.toNumber() + menu.price.toNumber(),
+          },
+        });
+      }
     }
 
     // decrement user's balance and update
