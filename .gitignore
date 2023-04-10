@@ -4,6 +4,9 @@
 # yarn.lock is sufficient
 package-lock.json
 
+# ignore zip files (uploaded to elastic beanstalk)
+*.zip
+
 # database data
 data
 
