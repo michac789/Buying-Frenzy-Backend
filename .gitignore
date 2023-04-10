@@ -1,6 +1,9 @@
 # env secret variable
 .env
 
+# yarn.lock is sufficient
+package-lock.json
+
 # database data
 data
 
