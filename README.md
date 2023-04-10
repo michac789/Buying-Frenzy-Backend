@@ -3,11 +3,9 @@
 Table of contents:
 
 - Overview
-- Database Schema Documentation
 - Complete API Documentation
-- Main Operations Approach & Remarks
+- Testing Coverage
 - How To Run
-- Testing
 
 ## Overview
 
@@ -15,11 +13,60 @@ Complete functional backend application created using NodeJS and NestJS Framewor
 
 TODO
 
-## Database Schema Documentation
+### Requirement Remarks
 
 TODO
 
+### Deployment
+
+TODO - add link
+
 ## Complete API Documentation
+
+### Database Schemas
+
+1. Restaurant
+
+- **id** (Integer, Primary Key Autoincrement)
+- **cashBalance** (Decimal 2dp): cash gained by the restaurant, by default is zero when new restaurant is created, increases accordingly as user made new purchase
+- **openingHours** (String, format: `HH:MM/HH:MM/.../HH:MM`)
+  - There should be exactly 14 HH:MM, seperated by delimeter '/'
+  - The first HH:MM represents opening hour on Monday, second HH:MM represents closing hour on Monday, third represents opening hour on Tuesday, and so on, until the last represents closing hour on Sunday
+  - HH:MM should be in 24 hours format, and should be a valid time
+  - For example, the string `10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45` means that the store is open at:
+    - Monday, Tuesday: 10:00 - 21:00
+    - Wednesday, Friday: 09:45 - 18:45
+    - Thursday: Closed entirely
+    - Saturday: 11:00 - 23:30
+    - Sunday: 10:15 - 19:45
+- **restaurantName** (String): name of the restaurant (\*I wanted to make this name unique, but it seems some sample data violated the constraint, so I removed the unique attribute)
+- **ownerId** (Integer, FK to User): foreign key to User, stores the id of the User model who created the restaurant, by default the account (has to be logged in) who created the restaurant be the owner; for the sample restaurant data given, I created a sample user and assign that user as the owner of all sample data
+
+2. User
+
+- **id** (Integer, Primary Key Autoincrement)
+- **cashBalance** (Decimal 2dp): balance owned by the user, by default is zero when account is created, user able to top up using an endpoint, balance decrease accordingly when making purchases
+- **name** (String, unique): unique username to identify every user
+- **password** (String): store the hashed password, for sample purpose there is no constraint regarding strength of the password (e.g., password of `123` is too weak and shouln't be allowed, but we bypass that in this example for the sake of easy testing)
+- **email** (String, optional): store an email (made optional here, can be left empty/null)
+
+3. Menu
+
+- **id**(Integer, Primary Key Autoincrement)
+- **dishName** (String, unique on each restaurant): name of the dish, no duplicate dish allowed in the same restaurant
+- **price** (Decimal 2dp): price of one instance of this menu
+- **restaurantId** (Integer, FK to Restaurant): foreign key to Restaurant, indicating that this menu belongs to the restaurant with this id
+
+4. PurchaseHistory
+
+- **id**(Integer, Primary Key Autoincrement)
+- **transactionDate** (DateTime): by default current date time of creation, date and time of when the transaction takes place
+- **menuId** (Integer, FK to Menu): each purchase can be associated to one menu instance, meaning that the user purchase this menu
+- **userId** (Integer, FK to User): the user who buy or made the purchase; when making purchases, user will be charged the price of this menu, and the balance will be added to the appropriate restaurant
+
+Remarks:
+
+- All foreign key here uses 'cascade' when deletion; this means that if the foreign key associated with an instance is deleted, then the instance will also be deleted (for example: if the restaurant is deleted, all associated menu that stores that restaurantId as a foreign key will also be deleted); _this might not be the best case everytime, it's best to adjust based on your needs (e.g., set to null instead, or do not allow deletion): for example when user delete their account, still store all transaction history but set it to null; alternatively, you can pretend to delete the account by having a active/deactivated status, but do not actually delete it from the database_
 
 ### `[POST] /sso/register/`
 
@@ -49,7 +96,7 @@ Sample Output:
 
 Explanation:
 
-- Login functionality using jwt \*_(for this simplistic example, it only return access token, not with refresh token)_
+- Login functionality using jwt \*_(for this simplistic example, it only return access token, not with refresh token; this approach here might raise some security concerns so it is not recommended in real practice)_
 - Request body: name, password
 - Return 200 if success, with the signed access token
 - Return 400 if it does not satisfy dto constraint (e.g., missing name or password)
@@ -166,823 +213,246 @@ Sample Output:
   - page (positive integer): display page number 'page', by default 1
   - pricelte (non-negative number): 'price less than or equal to' filter, default 999999 (arbirary large num)
   - pricegte (non-negative number): 'price greater than or equal to' filter, default 0
-  - dishlte (positive integer): 'dish count less than or equal to' filter, default 1000 (arbirary large)
+  - dishlte (positive integer): 'dish count less than or equal to' filter, default 10000 (arbirary large)
   - dishgte (positive integer): 'dish count grater than or equal to' filter, default 1
-  - sort (boolean): sort alphabetically if true, default false
+  - sort (boolean \*true/false): sort alphabetically if true, default false
+- Return 200 if success, with pagination info (total pages, whether next/prev page exist, see sample output below for example)
+- Return 400 if any optional query params format is invalid
 
-Return 200 if success, with pagination info (total pages, whether next/prev page exist)
-Return 400 if any optional query params format is invalid.
+Sample Input 1:
 
-Sample Output:
+    itemsperpage=3
+    page=21
+    sort=true
+
+This means:
+
+- paginate 3 restaurants only per page (per request) \*_(remarks: realistically you'd want more than 3, for example request 50 restaurants at a time and combine with infinite scrolling feature or pagination, for the sake of this example let's just pick a small number so that the sample output is not too big)_
+- go to page 21 out of 735 (total page number given below on the output)
+- sort alphabetically
+
+Sample Output 1:
 
     {
         "items": [
             {
-                "id": 20034,
-                "cashBalance": "4483.84",
-                "openingHours": "Mon, Fri 2:30 pm - 8 pm / Tues 11 am - 2 pm / Weds 1:15 pm - 3:15 am / Thurs 10 am - 3:15 am / Sat 5 am - 11:30 am / Sun 10:45 am - 5 pm",
-                "restaurantName": "'Ulu Ocean Grill and Sushi Lounge"
+                "id": 31206,
+                "cashBalance": "4169.97",
+                "openingHours": "11:00/23:00/11:00/23:00/11:00/23:00/11:00/23:00/11:00/23:00/11:00/23:00/11:00/23:00",
+                "restaurantName": "Alhamra"
             },
             {
-                "id": 20035,
-                "cashBalance": "2614.96",
-                "openingHours": "Mon, Weds 5:15 am - 8:30 pm / Tues, Sat 1:30 pm - 3:45 pm / Thurs 7:45 am - 8:15 am / Fri 1:30 pm - 7 pm / Sun 12:45 pm - 6:15 pm",
-                "restaurantName": "12 Baltimore"
+                "id": 31189,
+                "cashBalance": "2367.27",
+                "openingHours": "06:00/09:45/14:30/19:45/09:45/03:45/08:00/18:00/17:00/02:00/06:30/17:15/14:45/22:30",
+                "restaurantName": "Alinea"
             },
             {
-                "id": 20036,
-                "cashBalance": "4841.8",
-                "openingHours": "Mon - Weds 11 am - 9 pm / Thurs 6 am - 9 pm / Fri 12:15 pm - 7 pm / Sat 2:45 pm - 1:30 am / Sun 7 am - 4:15 pm",
-                "restaurantName": "1515 Restaurant"
-            },
-            {
-                "id": 20037,
-                "cashBalance": "960.2",
-                "openingHours": "Mon 5 pm - 10:30 pm / Tues, Sat 5 pm - 6:45 pm / Weds - Thurs 3:15 pm - 3:45 am / Fri 9:15 am - 10:45 am / Sun 10:45 am - 3:45 pm",
-                "restaurantName": "13 Coins"
-            },
-            {
-                "id": 20038,
-                "cashBalance": "4260.93",
-                "openingHours": "Mon 4:30 pm - 11:15 pm / Tues, Sat 3:30 pm - 5 pm / Weds 5:15 am - 9:30 pm / Thurs 1 pm - 2:15 pm / Fri 6:45 am - 7:45 am / Sun 8:30 am - 2 am",
-                "restaurantName": "17 at The Sam Houston Hotel-Houston"
-            },
-            {
-                "id": 20039,
-                "cashBalance": "4632.74",
-                "openingHours": "Mon, Weds 11 am - 8 pm / Tues, Thurs - Fri 1:15 pm - 8:30 pm / Sat 7:45 am - 6:15 pm / Sun 11:45 am - 6 pm",
-                "restaurantName": "2 Cents"
-            },
-            {
-                "id": 20042,
-                "cashBalance": "3211.97",
-                "openingHours": "Mon 6 am - 8:30 pm / Tues - Weds 6:45 am - 3 pm / Thurs 6:15 am - 8:30 am / Fri 4 pm - 10:15 pm / Sat 1:30 pm - 11:45 pm / Sun 6:30 am - 8:15 am",
-                "restaurantName": "15Fifty - Sheraton - Starwood"
-            },
-            {
-                "id": 20045,
-                "cashBalance": "416.69",
-                "openingHours": "Mon 10:30 am - 3:15 pm / Tues - Weds 7:15 am - 12:30 am / Thurs 6:45 am - 12 am / Fri 5 am - 11:30 pm / Sat - Sun 5:30 am - 9:45 am",
-                "restaurantName": "1808 American Bistro"
-            },
-            {
-                "id": 20041,
-                "cashBalance": "1320.19",
-                "openingHours": "Mon, Weds 3:45 pm - 5 pm / Tues 11:30 am - 3 am / Thurs 10 am - 11:30 pm / Fri 7 am - 9:45 am / Sat 12:45 pm - 1:15 pm / Sun 2 pm - 7 pm",
-                "restaurantName": "100% Mexicano Restaurant"
-            },
-            {
-                "id": 20043,
-                "cashBalance": "4629.91",
-                "openingHours": "Mon 5:30 am - 6 pm / Tues 10 am - 12:15 am / Weds 1:45 pm - 4:45 pm / Thurs 7:15 am - 3:45 am / Fri 1:30 pm - 12:45 am / Sat 7 am - 11:45 am / Sun 1:15 pm - 12:30 am",
-                "restaurantName": "100% de Agave"
+                "id": 31195,
+                "cashBalance": "4200.22",
+                "openingHours": "11:00/23:00/11:00/23:00/11:00/23:00/11:00/23:00/11:00/23:00/11:00/23:00/11:00/23:00",
+                "restaurantName": "Alioto's Restaurant"
             }
         ],
         "pagination": {
-            "total": 221,
+            "total": 735,
+            "hasNext": true,
+            "hasPrev": true
+        }
+    }
+
+Sample Input 2:
+
+    itemsperpage=2
+    dishgte=14
+
+This means:
+
+- filter restaurants that has more than or equal to 14 dishes in it
+- paginate 2 restaurants, by default go to page 1
+
+Sample Output 2:
+
+    {
+        "items": [
+            {
+                "id": 31132,
+                "cashBalance": "4483.84",
+                "openingHours": "14:30/20:00/11:00/14:00/13:15/03:15/10:00/03:15/14:30/20:00/05:00/11:30/10:45/17:00",
+                "restaurantName": "'Ulu Ocean Grill and Sushi Lounge"
+            },
+            {
+                "id": 31144,
+                "cashBalance": "960.2",
+                "openingHours": "17:00/22:30/17:00/18:45/15:15/03:45/15:15/03:45/09:15/10:45/17:00/18:45/10:45/15:45",
+                "restaurantName": "13 Coins"
+            }
+        ],
+        "pagination": {
+            "total": 82,
             "hasNext": true,
             "hasPrev": false
         }
     }
 
+Sample Input 3:
+
+    itemsperpage=3
+    page=9
+    dishgte=10
+    dishlte=12
+    pricegte=11.5
+    pricelte=19.99
+
+This means:
+
+- filter restaurants that has between 10 to 12 dishes inclusive within the price range 11.5 to 19.99 inclusive
+- paginate 2 restaurants per page, go to page 9 \*(which happens to be the last page here, that's why you see less than 2 restaurant for the output)
+
+Sample Output 3:
+
+    {
+        "items": [
+            {
+                "id": 33081,
+                "cashBalance": "1747.03",
+                "openingHours": "14:00/01:15/14:00/01:15/14:00/01:15/16:30/03:45/14:00/01:15/09:30/11:00/09:30/11:00",
+                "restaurantName": "The Patio on Guerra"
+            }
+        ],
+        "pagination": {
+            "total": 9,
+            "hasNext": false,
+            "hasPrev": true
+        }
+    }
+
 ### `[GET] /restaurant/search/`
 
-Requires 'q' query parameter for search query, optional pagination similar to above.
-Get restaurants in descending order or relevance (by Jaro Winkler algo).
-Return 200 if success, with relevance for each restaurant & pagination info.
-Return 400 if any optional query params format is invalid.
+- Requires 'q' query parameter for search query, optional pagination feature similar to above.
+- Get restaurants in descending order or relevance (by Jaro Winkler algorithm)
+- It will calculate the jaro distance between `q` and `restaurantName`, and between `q` with all `dishName` (menus associated with the restaurant) minus by 0.1 (so that restaurantName has stronger importance than the dishName), then the relevance is the max out of all
+  - \*_(Remarks: realistically, it'd be better to use ElasticSearch or similar service, this algo is quite okay and easy to implement, the main downside is that it cannot detect synonyms)_.
+  - For example, if there is a restaurant called `Pasta Express` with `Pizza` and `Beef Spaghetti` as a menu, when the user enter `pizas` for q, it will calculate:
+    - Jaro('Pasta Express', 'pizas') = 0.65
+    - Jaro('Cheese Pizza', 'pizas') - 0.1 = 0.81
+    - Jaro('Beef Spaghetti', 'pizas') - 0.1 = 0.34
+    - The max of all of that is 0.81, which will be the relevance
+    - Note that we ignore the case here (all letters will be lower cased first)
+    - Looking at this example, if you'd search something like `Italian` (referring to italian food), the relevance would be quite low (same with other synonyms or relevant words that is completely different with the restaurant or menu name)
+- Return 200 if success, with relevance for each restaurant & pagination info.
+  Return 400 if any optional query params format is invalid.
+
+Sample Input:
+
+    q=downtowngrill
+    itemsperpage=3
 
 Sample Output:
 
     {
         "items": [
             {
-                "id": 20034,
-                "cashBalance": "4483.84",
-                "openingHours": "Mon, Fri 2:30 pm - 8 pm / Tues 11 am - 2 pm / Weds 1:15 pm - 3:15 am / Thurs 10 am - 3:15 am / Sat 5 am - 11:30 am / Sun 10:45 am - 5 pm",
-                "restaurantName": "'Ulu Ocean Grill and Sushi Lounge",
-                "ownerId": 4560,
+                "id": 31684,
+                "cashBalance": "4513.28",
+                "openingHours": "13:30/15:30/13:15/14:45/13:30/15:30/16:00/21:00/13:30/03:15/16:00/21:00/13:15/14:45",
+                "restaurantName": "Downing Street Grill",
+                "ownerId": 9636,
                 "menus": [
                     {
-                        "id": 91616,
-                        "dishName": "DRY LIGHT IMPORTED WINE",
-                        "price": "13.5",
-                        "restaurantId": 20034
+                        "id": 190014,
+                        "dishName": "Le Rognon Moutarde",
+                        "price": "13.67",
+                        "restaurantId": 31684
                     },
                     {
-                        "id": 91620,
-                        "dishName": "Broiled Pompano",
-                        "price": "13.5",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91621,
-                        "dishName": "Dean Yale School of Medicine",
-                        "price": "12.56",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91622,
-                        "dishName": "Place here Stamp",
-                        "price": "12.38",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91623,
-                        "dishName": "1908 Berncasteler",
-                        "price": "11.64",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91624,
-                        "dishName": "Hummersuppe Filetsteak Nelson",
-                        "price": "10.51",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91625,
-                        "dishName": "Hominy",
-                        "price": "10.2",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91626,
-                        "dishName": "Baltimore terrapin",
-                        "price": "14",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91627,
-                        "dishName": "Lettuce and Tomato Salads",
-                        "price": "11.79",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91619,
-                        "dishName": "Coffee Cocktail (Port Wine",
-                        "price": "12.45",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91615,
-                        "dishName": "La Romaine Braisée au Fond de Veau",
-                        "price": "10.59",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91618,
-                        "dishName": "GAI TOM KA: CHICKEN IN COCONUT CREAM SOUP WITH LIME JUICE GALANGA AND CHILI",
-                        "price": "10.64",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91617,
-                        "dishName": "Postum cereal coffee",
-                        "price": "13.88",
-                        "restaurantId": 20034
-                    },
-                    {
-                        "id": 91628,
-                        "dishName": "Sweet Virginia Pickles",
-                        "price": "10.15",
-                        "restaurantId": 20034
-                    }
-                ],
-                "relevance": 0.9
-            },
-            {
-                "id": 20879,
-                "cashBalance": "3095.29",
-                "openingHours": "Mon, Thurs - Fri 11 am - 6:30 pm / Tues - Weds 8 am - 12:30 am / Sat 8 am - 3:45 am / Sun 1:45 pm - 3:15 am",
-                "restaurantName": "J&R Tacos",
-                "ownerId": 4560,
-                "menus": [
-                    {
-                        "id": 98808,
-                        "dishName": "DRY TOAST",
-                        "price": "12.73",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98813,
-                        "dishName": "Sauterne",
-                        "price": "11.25",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98807,
-                        "dishName": "œufs Plat Miroir",
-                        "price": "11.12",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98812,
-                        "dishName": "Cold York Ham",
-                        "price": "10.39",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98817,
-                        "dishName": "Physical Culture Health Bread",
-                        "price": "10.42",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98809,
-                        "dishName": "Tomato",
-                        "price": "12.82",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98814,
-                        "dishName": "Lobster a l'Americaine",
-                        "price": "15.7",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98818,
-                        "dishName": "Mushroom omelette with bacon",
-                        "price": "30",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98805,
-                        "dishName": "Hors d'Oeuvres varies",
-                        "price": "10.75",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98810,
-                        "dishName": "Toast à la moëlle",
-                        "price": "13.22",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98815,
-                        "dishName": "1865 Scharzhofberger",
-                        "price": "12.28",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98806,
-                        "dishName": "Steamed Lemon Pudding",
-                        "price": "10.4",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98811,
-                        "dishName": "Guinea hen (half) currant jelly (20 min.)",
-                        "price": "11.25",
-                        "restaurantId": 20879
-                    },
-                    {
-                        "id": 98816,
-                        "dishName": "B & B (Benedictine & Brandy",
-                        "price": "10.6",
-                        "restaurantId": 20879
-                    }
-                ],
-                "relevance": 0.7164251207729468
-            },
-            {
-                "id": 21987,
-                "cashBalance": "2809",
-                "openingHours": "Mon 3:30 pm - 8:15 pm / Tues 9:45 am - 3:45 am / Weds 5:30 pm - 3 am / Thurs 9:15 am - 11:15 am / Fri - Sat 8:15 am - 6:15 pm / Sun 10 am - 11:30 am",
-                "restaurantName": "The Patio",
-                "ownerId": 4560,
-                "menus": [
-                    {
-                        "id": 108230,
-                        "dishName": "Ballottine de canard",
-                        "price": "10.49",
-                        "restaurantId": 21987
-                    },
-                    {
-                        "id": 108227,
-                        "dishName": "Fried Chicken a la Maryland [with] Corn Fritters",
-                        "price": "12.79",
-                        "restaurantId": 21987
-                    },
-                    {
-                        "id": 108229,
-                        "dishName": "De Luxe Scotch Brands",
-                        "price": "10.9",
-                        "restaurantId": 21987
-                    },
-                    {
-                        "id": 108226,
-                        "dishName": "DRY GIN  IND. BOTTLE",
-                        "price": "10.25",
-                        "restaurantId": 21987
-                    }
-                ],
-                "relevance": 0.7045962732919255
-            },
-            {
-                "id": 21701,
-                "cashBalance": "3323.86",
-                "openingHours": "Mon 7:45 am - 1:30 pm / Tues, Fri 12 pm - 12 am / Weds 1:15 pm - 11:45 pm / Thurs, Sun 11:45 am - 3:15 pm / Sat 9:30 am - 6:45 pm",
-                "restaurantName": "Shula's Steak House - Hyatt Regency Houston",
-                "ownerId": 4560,
-                "menus": [
-                    {
-                        "id": 105753,
-                        "dishName": "3 oeufs brouillés ou oeufs sur le plat",
-                        "price": "13.56",
-                        "restaurantId": 21701
-                    },
-                    {
-                        "id": 105758,
-                        "dishName": "DRY POUILLY RESERVE",
-                        "price": "10.27",
-                        "restaurantId": 21701
-                    },
-                    {
-                        "id": 105754,
-                        "dishName": "Pikantes Rehragou",
-                        "price": "10.62",
-                        "restaurantId": 21701
-                    },
-                    {
-                        "id": 105759,
-                        "dishName": "Ackerman Laurance Dry Royal",
-                        "price": "14.35",
-                        "restaurantId": 21701
-                    },
-                    {
-                        "id": 105752,
-                        "dishName": "Chablis (Imported)",
-                        "price": "15",
-                        "restaurantId": 21701
-                    },
-                    {
-                        "id": 105757,
-                        "dishName": "VANILLA ICE CREAM",
-                        "price": "10.72",
-                        "restaurantId": 21701
-                    },
-                    {
-                        "id": 105762,
-                        "dishName": "Calfshead a la Vinaigrette",
-                        "price": "12.48",
-                        "restaurantId": 21701
-                    },
-                    {
-                        "id": 105756,
-                        "dishName": "Insalata di Frutta Esotica",
-                        "price": "13.82",
-                        "restaurantId": 21701
-                    },
-                    {
-                        "id": 105760,
-                        "dishName": "Kippered Herring with Fried Egg",
-                        "price": "10.6",
-                        "restaurantId": 21701
-                    },
-                    {
-                        "id": 105755,
-                        "dishName": "Sausage",
-                        "price": "25",
-                        "restaurantId": 21701
-                    },
-                    {
-                        "id": 105761,
-                        "dishName": "haute sauterne",
-                        "price": "12.83",
-                        "restaurantId": 21701
-                    }
-                ],
-                "relevance": 0.6889969488939741
-            },
-            {
-                "id": 20313,
-                "cashBalance": "4445.19",
-                "openingHours": "Sun - Tues 3:45 pm - 2:15 am / Weds 10 am - 3:45 pm / Thurs - Fri 1:30 pm - 1 am / Sat 2:45 pm - 2:30 am",
-                "restaurantName": "Buca di Beppo - Southlake",
-                "ownerId": 4560,
-                "menus": [
-                    {
-                        "id": 94001,
-                        "dishName": "GUFFANTI'S SPECIAL CIGARS",
-                        "price": "16.25",
-                        "restaurantId": 20313
-                    },
-                    {
-                        "id": 94006,
-                        "dishName": "RICE PUDD.",
-                        "price": "10.15",
-                        "restaurantId": 20313
-                    },
-                    {
-                        "id": 94003,
-                        "dishName": "DRY MARTINI",
-                        "price": "10.39",
-                        "restaurantId": 20313
-                    },
-                    {
-                        "id": 94000,
-                        "dishName": "Sliced bananas with orange",
-                        "price": "10.2",
-                        "restaurantId": 20313
-                    },
-                    {
-                        "id": 94005,
-                        "dishName": "1993er FLEUR DU ROY",
-                        "price": "11.44",
-                        "restaurantId": 20313
-                    },
-                    {
-                        "id": 94004,
-                        "dishName": "Mainzer Kase mit Roggelchen un Butter",
-                        "price": "13.43",
-                        "restaurantId": 20313
-                    },
-                    {
-                        "id": 94009,
-                        "dishName": "Lake Trout",
-                        "price": "10.75",
-                        "restaurantId": 20313
-                    },
-                    {
-                        "id": 94002,
-                        "dishName": "Puree of squash",
-                        "price": "10.5",
-                        "restaurantId": 20313
-                    },
-                    {
-                        "id": 94007,
-                        "dishName": "Iced Papaya Juice",
-                        "price": "11.41",
-                        "restaurantId": 20313
-                    }
-                ],
-                "relevance": 0.6863416776460255
-            },
-            {
-                "id": 22042,
-                "cashBalance": "3639.43",
-                "openingHours": "Mon 7 am - 5:15 pm / Tues, Thurs 3:45 pm - 12:30 am / Weds 1:30 pm - 8:30 pm / Fri - Sat 7:30 am - 3:30 am / Sun 8:30 am - 7 pm",
-                "restaurantName": "The White Buffalo Club",
-                "ownerId": 4560,
-                "menus": [
-                    {
-                        "id": 108717,
-                        "dishName": "Alexandra",
-                        "price": "10.5",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108719,
-                        "dishName": "Amaretto di Sarono",
-                        "price": "13.06",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108722,
-                        "dishName": "Grilled Baby Chicken Méphisto",
-                        "price": "13.72",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108724,
-                        "dishName": "IMPORTED ITALIAN CHIANTI WINE",
-                        "price": "13.75",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108727,
-                        "dishName": "Fischballe",
-                        "price": "10.17",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108729,
-                        "dishName": "Junge Ente",
-                        "price": "12.1",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108718,
-                        "dishName": "Pol Roger Brut 1945",
-                        "price": "12",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108720,
-                        "dishName": "12 Weinbergschnecken im Haus mit Toast",
-                        "price": "12.96",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108723,
-                        "dishName": "Flusskrebsensuppe mit Cognac",
-                        "price": "12.81",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108726,
-                        "dishName": "BROILED T-BONE STEAK- So tender and juicy you will smack your lips",
-                        "price": "10.73",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108728,
-                        "dishName": "BROILED FRESH BABY MACKEREL - Melted Fresh Creamery Butter",
-                        "price": "10.45",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108730,
-                        "dishName": "Fresh Lettuce and Tomato Salad",
-                        "price": "12.62",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108721,
-                        "dishName": "Les Filets de Sea Bass Poches Bourguignonne",
-                        "price": "12.6",
-                        "restaurantId": 22042
-                    },
-                    {
-                        "id": 108725,
-                        "dishName": "bent's crackers",
-                        "price": "13.74",
-                        "restaurantId": 22042
-                    }
-                ],
-                "relevance": 0.5779636497540703
-            },
-            {
-                "id": 21103,
-                "cashBalance": "4785.87",
-                "openingHours": "Mon - Tues, Fri 6:15 am - 1:45 pm / Weds, Sat 12:30 pm - 10 pm / Thurs 10:15 am - 11:45 pm / Sun 1:30 pm - 1 am",
-                "restaurantName": "Ludwig's",
-                "ownerId": 4560,
-                "menus": [
-                    {
-                        "id": 100616,
-                        "dishName": "BROILED PRIME DINNER STEAK",
+                        "id": 190007,
+                        "dishName": "Caracoles en Tazitas a la Borgona",
                         "price": "12.75",
-                        "restaurantId": 21103
+                        "restaurantId": 31684
                     },
                     {
-                        "id": 100620,
-                        "dishName": "Squab Guinea Hen Venitienne",
-                        "price": "12",
-                        "restaurantId": 21103
+                        "id": 190010,
+                        "dishName": "The Mexican Hayride Cocktail",
+                        "price": "10.55",
+                        "restaurantId": 31684
                     },
                     {
-                        "id": 100619,
-                        "dishName": "Tikwah II (Medoc) Palestine Carmel Wine",
-                        "price": "10.75",
-                        "restaurantId": 21103
+                        "id": 190008,
+                        "dishName": "Rex",
+                        "price": "10.95",
+                        "restaurantId": 31684
                     }
                 ],
-                "relevance": 0.5768239811718072
+                "relevance": 0.7064102564102565
             },
             {
-                "id": 21389,
-                "cashBalance": "4199.28",
-                "openingHours": "Mon - Weds 11 am - 6 pm / Thurs 12:15 pm - 3 pm / Fri - Sat 7:30 am - 10:30 am / Sun 6:45 am - 12 am",
-                "restaurantName": "PRISM",
-                "ownerId": 4560,
+                "id": 33248,
+                "cashBalance": "225.83",
+                "openingHours": "09:15/21:45/15:00/22:45/14:45/23:30/09:15/21:45/14:45/23:30/08:00/21:15/10:15/20:00",
+                "restaurantName": "Vintner Grill",
+                "ownerId": 9636,
                 "menus": [
                     {
-                        "id": 103155,
-                        "dishName": "Beech-Nut Bacon and Eggs",
-                        "price": "10.65",
-                        "restaurantId": 21389
+                        "id": 203309,
+                        "dishName": "Cromesquis of Chicken",
+                        "price": "13.16",
+                        "restaurantId": 33248
                     },
                     {
-                        "id": 103159,
-                        "dishName": "Fresh Mushrooms Stuffed with Oyster Crabs",
-                        "price": "12.68",
-                        "restaurantId": 21389
-                    },
-                    {
-                        "id": 103157,
-                        "dishName": "Virgin Rum Swizzle- 1 oz. Virgin Islands dark rum",
-                        "price": "10.6",
-                        "restaurantId": 21389
-                    },
-                    {
-                        "id": 103156,
-                        "dishName": "Assorted Garden Vegetable Plate with Poached Egg",
-                        "price": "10.85",
-                        "restaurantId": 21389
-                    },
-                    {
-                        "id": 103161,
-                        "dishName": "Chicken Consomme with Tapioca",
-                        "price": "11.82",
-                        "restaurantId": 21389
-                    },
-                    {
-                        "id": 103160,
-                        "dishName": "Dessert Tour Eiffel",
-                        "price": "13.12",
-                        "restaurantId": 21389
-                    },
-                    {
-                        "id": 103154,
-                        "dishName": "Buttered Broad Beans",
-                        "price": "12.91",
-                        "restaurantId": 21389
-                    },
-                    {
-                        "id": 103158,
-                        "dishName": "Home-made corned brisket of beef with cabbage or spinach",
-                        "price": "12.65",
-                        "restaurantId": 21389
-                    },
-                    {
-                        "id": 103163,
-                        "dishName": "Pralinee Ice Cream",
+                        "id": 203301,
+                        "dishName": "Le crabe belle aurore",
                         "price": "10.3",
-                        "restaurantId": 21389
-                    }
-                ],
-                "relevance": 0.5768115942028985
-            },
-            {
-                "id": 20157,
-                "cashBalance": "2144.46",
-                "openingHours": "Sun - Mon 6 am - 11:30 am / Tues 7:15 am - 3:15 am / Weds 9:15 am - 9:30 pm / Thurs, Sat 1:45 pm - 2:15 am / Fri 9:30 am - 9 pm",
-                "restaurantName": "BRASSERIE TEN TEN",
-                "ownerId": 4560,
-                "menus": [
-                    {
-                        "id": 92647,
-                        "dishName": "Poctrine de Veau Farois Porte Maillot",
-                        "price": "12.5",
-                        "restaurantId": 20157
+                        "restaurantId": 33248
                     },
                     {
-                        "id": 92652,
-                        "dishName": "Roast Ribs of Lamb",
-                        "price": "10.45",
-                        "restaurantId": 20157
-                    },
-                    {
-                        "id": 92648,
-                        "dishName": "Fränkische Leberwurst mit Bauernbrot",
-                        "price": "12.32",
-                        "restaurantId": 20157
-                    },
-                    {
-                        "id": 92650,
-                        "dishName": "Smelts sautes",
-                        "price": "12.33",
-                        "restaurantId": 20157
-                    },
-                    {
-                        "id": 92656,
-                        "dishName": "Booths gin",
-                        "price": "10.15",
-                        "restaurantId": 20157
-                    },
-                    {
-                        "id": 92646,
-                        "dishName": "Lake Trout",
-                        "price": "10.5",
-                        "restaurantId": 20157
-                    },
-                    {
-                        "id": 92653,
-                        "dishName": "Asperges",
-                        "price": "13.84",
-                        "restaurantId": 20157
-                    },
-                    {
-                        "id": 92657,
-                        "dishName": "Gold Cap Port Wine",
-                        "price": "12.81",
-                        "restaurantId": 20157
-                    },
-                    {
-                        "id": 92651,
-                        "dishName": "Fresh Mushroom Omelette",
-                        "price": "10.45",
-                        "restaurantId": 20157
-                    },
-                    {
-                        "id": 92655,
-                        "dishName": "Salade Yam - Yam",
-                        "price": "12.74",
-                        "restaurantId": 20157
-                    },
-                    {
-                        "id": 92649,
-                        "dishName": "cold asparagus salad",
-                        "price": "10.2",
-                        "restaurantId": 20157
-                    },
-                    {
-                        "id": 92654,
-                        "dishName": "BEEF WITH PEPPERS Beef slices in a lively sauce with peppers.",
-                        "price": "10.89",
-                        "restaurantId": 20157
-                    }
-                ],
-                "relevance": 0.5743393009377664
-            },
-            {
-                "id": 21639,
-                "cashBalance": "347.94",
-                "openingHours": "Mon, Weds 7:30 am - 12:45 am / Tues 12:30 pm - 2:30 pm / Thurs 7:30 am - 6 pm / Fri 8:30 am - 3:30 pm / Sat 11 am - 1:45 pm / Sun 7:30 am - 4 pm",
-                "restaurantName": "Sal y Pimienta Kitchen",
-                "ownerId": 4560,
-                "menus": [
-                    {
-                        "id": 105258,
-                        "dishName": "Nuits",
-                        "price": "13",
-                        "restaurantId": 21639
-                    },
-                    {
-                        "id": 105263,
-                        "dishName": "VOL AU VENT DE RIS DE VEAU",
-                        "price": "13.77",
-                        "restaurantId": 21639
-                    },
-                    {
-                        "id": 105268,
-                        "dishName": "Pumpkin Cake",
-                        "price": "10.2",
-                        "restaurantId": 21639
-                    },
-                    {
-                        "id": 105260,
-                        "dishName": "Femoring med lok och stekt agg",
-                        "price": "12.89",
-                        "restaurantId": 21639
-                    },
-                    {
-                        "id": 105264,
-                        "dishName": "Sorbet Nicois",
-                        "price": "11.39",
-                        "restaurantId": 21639
-                    },
-                    {
-                        "id": 105259,
-                        "dishName": "Frische norwegische Heringshappen in Dillsauce",
-                        "price": "13.81",
-                        "restaurantId": 21639
-                    },
-                    {
-                        "id": 105265,
-                        "dishName": "potage au vermicelle",
-                        "price": "11.92",
-                        "restaurantId": 21639
-                    },
-                    {
-                        "id": 105269,
-                        "dishName": "Brandied peach",
-                        "price": "10.4",
-                        "restaurantId": 21639
-                    },
-                    {
-                        "id": 105257,
-                        "dishName": "Cold Meats - Roast Beef",
-                        "price": "12.82",
-                        "restaurantId": 21639
-                    },
-                    {
-                        "id": 105262,
-                        "dishName": "Half-Sandwich (choice of Tuna Salad",
-                        "price": "12",
-                        "restaurantId": 21639
-                    },
-                    {
-                        "id": 105270,
-                        "dishName": "EARLE GREY TWININGS TEA",
+                        "id": 203306,
+                        "dishName": "Rhine wine",
                         "price": "10.75",
-                        "restaurantId": 21639
+                        "restaurantId": 33248
                     },
                     {
-                        "id": 105256,
-                        "dishName": "Moet & Chandon champagne special vintage 1900",
-                        "price": "13.88",
-                        "restaurantId": 21639
+                        "id": 203305,
+                        "dishName": "Geroosterde Kalfslever met geroosterde Bacon",
+                        "price": "13.78",
+                        "restaurantId": 33248
                     },
                     {
-                        "id": 105261,
-                        "dishName": "Sirloin with Truffles",
-                        "price": "11.01",
-                        "restaurantId": 21639
+                        "id": 203310,
+                        "dishName": "Imperial Pudding",
+                        "price": "12.57",
+                        "restaurantId": 33248
                     },
                     {
-                        "id": 105266,
-                        "dishName": "All Beef Hamburger",
-                        "price": "10.5",
-                        "restaurantId": 21639
+                        "id": 203302,
+                        "dishName": "Broiled Swordfish Steak",
+                        "price": "13.59",
+                        "restaurantId": 33248
+                    },
+                    {
+                        "id": 203307,
+                        "dishName": "Geraucherter Rhein Salm",
+                        "price": "12.21",
+                        "restaurantId": 33248
+                    },
+                    {
+                        "id": 203304,
+                        "dishName": "Suprême de Bass",
+                        "price": "11.84",
+                        "restaurantId": 33248
+                    },
+                    {
+                        "id": 203308,
+                        "dishName": "Huîtres de Lynnhaven",
+                        "price": "12.82",
+                        "restaurantId": 33248
                     }
                 ],
-                "relevance": 0.5721014492753623
+                "relevance": 0.6923076923076922
             }
         ],
         "pagination": {
-            "total": 221,
+            "total": 1102,
             "hasNext": true,
             "hasPrev": false
         }
@@ -996,11 +466,107 @@ Sample Output:
 - Return 400 if it does not satisfy dto constraint.
 - Return 409 if conflict (same restaurantName).
 
+Sample Input:
+
+    {
+        "openingHours":
+            "10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45",
+        "restaurantName": "newResto"
+    }
+
+Sample Output:
+
+    {
+        "id": 33335,
+        "cashBalance": "0",
+        "openingHours": "10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45",
+        "restaurantName": "newResto",
+        "ownerId": 10637
+    }
+
+### `[GET] /restaurant/me/`
+
+- Get all restaurants created by the requesting user.
+- Return 200 if success, including all restaurant info except for menus.
+- Return 401 if not logged in.
+
+Sample Output:
+
+    [
+        {
+            "id": 33335,
+            "cashBalance": "0",
+            "openingHours": "10:00/21:00/10:00/21:00/09:45/18:45/00:00/00:00/09:45/18:45/11:00/23:30/10:15/19:45",
+            "restaurantName": "newResto",
+            "ownerId": 10637
+        }
+    ]
+
 ### `[GET] /restaurant/:id/`
 
 - Get a restaurant instance (including all menu), given its id.
 - Return 200 if success, with the restaurant instance and all menu in that restaurant.
 - Return 404 if instance not found (invalid id).
+
+Sample Output:
+
+    {
+        "id": 32000,
+        "cashBalance": "3052.98",
+        "openingHours": "11:00/22:00/11:00/22:00/11:00/22:00/11:00/22:00/11:00/22:00/11:00/22:00/12:00/22:00",
+        "restaurantName": "John's Grill",
+        "ownerId": 9636,
+        "menus": [
+            {
+                "id": 192717,
+                "dishName": "Roquefort Cheese",
+                "price": "10.3",
+                "restaurantId": 32000
+            },
+            {
+                "id": 192713,
+                "dishName": "Roast Saddle of Spring Lamb with potatoes Chateau",
+                "price": "12.09",
+                "restaurantId": 32000
+            },
+            {
+                "id": 192718,
+                "dishName": "Granat-Salate",
+                "price": "10.53",
+                "restaurantId": 32000
+            },
+            {
+                "id": 192716,
+                "dishName": "Grouse Roasted",
+                "price": "13.11",
+                "restaurantId": 32000
+            },
+            {
+                "id": 192709,
+                "dishName": "Laubenheimber Rhine Wine",
+                "price": "11",
+                "restaurantId": 32000
+            },
+            {
+                "id": 192715,
+                "dishName": "Gebratene grune Heringe in der Pfanne serviert",
+                "price": "10.86",
+                "restaurantId": 32000
+            },
+            {
+                "id": 192712,
+                "dishName": "Roast chicken w/Dressing",
+                "price": "10.5",
+                "restaurantId": 32000
+            },
+            {
+                "id": 192714,
+                "dishName": "Sea Bass",
+                "price": "13.5",
+                "restaurantId": 32000
+            }
+        ]
+    }
 
 ### `[POST] /restaurant/:id/`
 
@@ -1057,6 +623,34 @@ Sample Output:
 - Return 404 if any of the menuId is invalid.
 - Return 402 if cash balance insufficient.
 
+Sample Input:
+
+    {
+        "items": [
+            {
+                "menuId": 185342,
+                "quantity": 2
+            }
+        ]
+    }
+
+Sample Output:
+
+    [
+        {
+            "id": 77195,
+            "transactionDate": "2023-04-10T05:59:30.127Z",
+            "menuId": 185342,
+            "userId": 10639
+        },
+        {
+            "id": 77196,
+            "transactionDate": "2023-04-10T05:59:30.191Z",
+            "menuId": 185342,
+            "userId": 10639
+        }
+    ]
+
 ### `[POST] /sample/populate/`
 
 Populate database with given sample data.
@@ -1065,12 +659,19 @@ It is an async function, it will run for a few seconds after you get the respons
 ### `[DELETE] /sample/reset/`
 
 Delete all data in the database.
-Note that it does not reset the id count back to 1 again.
-It is an async function, it will run for a few seconds after you get the response.
+Note that it does not reset the id count back to 1 again. It is an async function, it will run for a few seconds after you get the response.
 
-## Main Operations Approach & Remarks
+## Testing
 
-TODO
+Currently there are 89 test cases, including individidual function unit testing and end to end testing.
+
+![Test0](/assets/test0.png)
+
+![Test1](/assets/test1.png)
+
+![Test2](/assets/test2.png)
+
+TODO - put more testing results here (about 20% of the endpoints does not have test cases yet)
 
 ## How To Run
 
@@ -1089,9 +690,3 @@ TODO
 7. You can run `npx prisma studio` to host an admin page with UI to view and navigate through the database, by default hosted in port 5555
 
 8. Type `yarn test` to run all test cases, or you can try manually requesting the APIs
-
-## Testing
-
-![Test1](/assets/test1.png)
-
-TODO - put more testing results here

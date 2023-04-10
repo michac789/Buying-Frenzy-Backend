@@ -5,7 +5,6 @@ import { ModelService } from '../model/model.service';
 import * as argon from 'argon2';
 import * as request from 'supertest';
 import { Menu, Restaurant, User } from '@prisma/client';
-import { IsRequiredDateTimeFormat } from '../main/dto/restaurant.dto';
 
 describe('App Main (Restaurant Generic Endpoints) e2e', () => {
   let app: INestApplication;
