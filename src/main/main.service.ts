@@ -18,7 +18,7 @@ import {
   RestaurantSearchPaginator,
 } from './dto/restaurant.dto';
 import { MenuDto } from './dto/menu.dto';
-import { PurchaseDto } from './dto/purchase.dto';
+import { PurchaseDto, PurchaseHistoryWithMenu } from './dto/purchase.dto';
 import { paginate, isStoreOpen, getRelevance } from './main.utils';
 
 @Injectable({})
@@ -284,6 +284,48 @@ export class MenuService {
 @Injectable({})
 export class PurchaseService {
   constructor(private model: ModelService) {}
+
+  async getPurchaseByOwner(user: User): Promise<any> {
+    const purchases: PurchaseHistory[] =
+      await this.model.purchaseHistory.findMany({
+        where: { userId: user.id },
+      });
+    for (let i = 0; i < purchases.length; i++) {
+      const menu: Menu = await this.model.menu.findFirst({
+        where: { id: purchases[i].menuId },
+      });
+      purchases[i]['menuName'] = menu.dishName;
+      purchases[i]['menuPrice'] = menu.price;
+    }
+    return purchases;
+  }
+
+  async getPurchaseByRestaurantId(
+    restaurantId: number,
+    user: User,
+  ): Promise<any> {
+    const restaurant: Restaurant = await this.model.restaurant.findFirst({
+      where: { id: restaurantId },
+    });
+    if (restaurant === null) throw new NotFoundException();
+    if (restaurant.ownerId !== user.id)
+      throw new ForbiddenException('You are not the owner of this restaurant.');
+    const menus = await this.model.menu.findMany({
+      where: { restaurantId: restaurantId },
+    });
+    let allPurchases: PurchaseHistory[] = [];
+    for (let i = 0; i < menus.length; i++) {
+      let purchases = await this.model.purchaseHistory.findMany({
+        where: { menuId: menus[i].id },
+      });
+      purchases.forEach((purchase) => {
+        purchase['menuName'] = menus[i].dishName;
+        purchase['menuPrice'] = menus[i].price;
+      });
+      allPurchases = allPurchases.concat(purchases);
+    }
+    return allPurchases;
+  }
 
   async getMenuById(menuId: number): Promise<Menu> {
     const menu = await this.model.menu.findFirst({

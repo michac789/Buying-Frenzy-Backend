@@ -27,7 +27,7 @@ import {
   RestaurantSearchPaginator,
 } from './dto/restaurant.dto';
 import { MenuDto } from './dto/menu.dto';
-import { PurchaseDto } from './dto/purchase.dto';
+import { PurchaseDto, PurchaseHistoryWithMenu } from './dto/purchase.dto';
 
 @Controller('restaurant')
 export class RestaurantController {
@@ -63,7 +63,7 @@ export class RestaurantController {
    * Return 400 if any optional query params format is invalid.
    */
   @Get('search')
-  async search(
+  async searchView(
     @Query() query: RestaurantSearchQueryParams,
   ): Promise<RestaurantSearchPaginator> {
     return this.service.searchRestaurantByRelevance(query);
@@ -218,6 +218,37 @@ export class PurchaseController {
   constructor(private service: PurchaseService) {}
 
   /**
+   * [GET] /purchase/me/
+   * Get all purchases made by the current requesting user.
+   * Return 401 if not logged in.
+   * Return 200 if success, with all purchases in a list (transactionDate, menu serialized).
+   */
+  @Get('me')
+  @UseGuards(JwtGuard)
+  async myPurchaseView(
+    @GetUser() user: User,
+  ): Promise<PurchaseHistoryWithMenu> {
+    return this.service.getPurchaseByOwner(user);
+  }
+
+  /**
+   * [GET] /purchase/restaurant/:id/
+   * Get all purchases made in a restaurant, only available for restaurant owner.
+   * Return 401 if not logged in.
+   * Return 404 if restaurant id invalid.
+   * Return 403 if restaurant not owned by requesting user.
+   * Return 200 if success, with all purchases in a list.
+   */
+  @Get('restaurant/:id')
+  @UseGuards(JwtGuard)
+  async purchaseRestaurantView(
+    @Param('id', ParseIntPipe) restaurantId: number,
+    @GetUser() user: User,
+  ): Promise<PurchaseHistoryWithMenu> {
+    return this.service.getPurchaseByRestaurantId(restaurantId, user);
+  }
+
+  /**
    * [POST] /purchase/
    * Create multiple purchases at once, requires a list of (menuId-quantity) object.
    * Add appropriate cash balance to restaurant, decrease from user.
@@ -229,7 +260,7 @@ export class PurchaseController {
    */
   @Post()
   @UseGuards(JwtGuard)
-  async purchaseDish(
+  async purchaseDishView(
     @Body() dto: PurchaseDto,
     @GetUser() user: User,
   ): Promise<PurchaseHistory[]> {

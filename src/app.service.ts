@@ -10,7 +10,7 @@ export class AppService {
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>Glints Technical Challenge (Backend)</title>
+      <title>Glints Technical Assignment (Backend)</title>
       <style>
         body {
           font-family: 'Roboto', sans-serif;
@@ -65,9 +65,9 @@ export class AppService {
     </head>
     <body>
       <div class="container">
-        <h1><u>Glints Technical Challenge (Backend)</u></h1>
+        <h1><u>Glints Technical Assignment (Backend)</u></h1>
         <h3>by Michael Andrew Chan</h3>
-        <h4>Version 1.2</h4>
+        <h4>Version 1.3</h4>
         <p>
           <span>Thank you for looking through my assignment, made based on <a href="https://gist.github.com/seahyc/97b154ce5bfd4f2b6e3a3a99a7b93f69" target="_blank">this brief</a>.</span>
           <span>I am okay to work for both backend and frontend, and am excited to work as software engineer intern at Glints.</span>

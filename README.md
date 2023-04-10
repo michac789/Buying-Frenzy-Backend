@@ -663,7 +663,6 @@ Note that it does not reset the id count back to 1 again. It is an async functio
 
 ## Testing
 
-<<<<<<< Updated upstream
 Currently there are 89 test cases, including individidual function unit testing and end to end testing.
 
 ![Test0](/assets/test0.png)
@@ -672,10 +671,9 @@ Currently there are 89 test cases, including individidual function unit testing 
 
 ![Test2](/assets/test2.png)
 
+![Test3](/assets/test3.png)
+
 TODO - put more testing results here (about 20% of the endpoints does not have test cases yet)
-=======
-### Testing Methods
->>>>>>> Stashed changes
 
 Currently there are 89 test cases, including individidual function unit testing and end to end testing. You can run all test cases by doing `yarn test` or specific test file by doing `yarn src/tests/<test_file_name>`.
 

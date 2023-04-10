@@ -6,7 +6,7 @@ import * as argon from 'argon2';
 import * as request from 'supertest';
 import { Menu, Restaurant, User } from '@prisma/client';
 
-describe('App Main (Restaurant Generic Endpoints) e2e', () => {
+describe('App Main Customized Endpoint e2e', () => {
   let app: INestApplication;
   let model: ModelService;
   let accessToken1: string, accessToken2: string;
@@ -635,6 +635,83 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
       expect(response.body[0].userId).toBe(sampleUser1.id);
       expect(response.body[1].menuId).toBe(menu2.id);
       expect(response.body[1].userId).toBe(sampleUser1.id);
+    });
+  });
+
+  describe('[GET] /purchase/me/', () => {
+    const myPurchaseEndpoint = '/purchase/me/';
+
+    it('Return 401 if not logged in', async () => {
+      const response = await request(app.getHttpServer()).get(
+        myPurchaseEndpoint,
+      );
+      expect(response.status).toBe(401);
+    });
+
+    it('Return 200 if success, with all purchases made by requesting user', async () => {
+      const response = await request(app.getHttpServer())
+        .get(myPurchaseEndpoint)
+        .set('Authorization', `Bearer ${accessToken1}`);
+      expect(response.status).toBe(200);
+      expect(response.body.length).toBe(5);
+      expect(response.body[0].menuId).toBe(menu1.id);
+      expect(response.body[1].menuId).toBe(menu1.id);
+      expect(response.body[2].menuId).toBe(menu2.id);
+      expect(response.body[3].menuId).toBe(menu3.id);
+      expect(response.body[4].menuId).toBe(menu2.id);
+      expect(response.body[4].menuName).toBe('Pork Rice');
+      expect(response.body[4].menuPrice).toBe('4.5');
+    });
+
+    it('Return 200 if success II, with all purchases made by requesting user', async () => {
+      const response = await request(app.getHttpServer())
+        .get(myPurchaseEndpoint)
+        .set('Authorization', `Bearer ${accessToken2}`); // this user haven't purchase anything yet
+      expect(response.status).toBe(200);
+      expect(response.body.length).toBe(0);
+    });
+  });
+
+  describe('[GET] /purchase/restaurant/:id/', () => {
+    const getRestaurantPurchaseEndpoint = (id: number) =>
+      `/purchase/restaurant/${id}/`;
+
+    it('Return 401 if not logged in', async () => {
+      const response = await request(app.getHttpServer()).get(
+        getRestaurantPurchaseEndpoint(resto1.id),
+      );
+      expect(response.status).toBe(401);
+    });
+
+    it('Return 404 if restaurant id invalid', async () => {
+      const response = await request(app.getHttpServer())
+        .get(getRestaurantPurchaseEndpoint(9999999))
+        .set('Authorization', `Bearer ${accessToken1}`);
+      expect(response.status).toBe(404);
+    });
+
+    it('Return 403 if restaurant not owned by requesting user', async () => {
+      const response = await request(app.getHttpServer())
+        .get(getRestaurantPurchaseEndpoint(resto1.id))
+        .set('Authorization', `Bearer ${accessToken2}`);
+      expect(response.status).toBe(403);
+    });
+
+    it('Return 200 if success, with all purchases of the dishes in that restaurant', async () => {
+      const response = await request(app.getHttpServer())
+        .get(getRestaurantPurchaseEndpoint(resto2.id))
+        .set('Authorization', `Bearer ${accessToken1}`);
+      expect(response.status).toBe(200);
+      expect(response.body.length).toBe(1);
+      expect(response.body[0].menuName).toBe(menu3.dishName);
+    });
+
+    it('Return 200 if success II, with all purchases of the dishes in that restaurant', async () => {
+      const response = await request(app.getHttpServer())
+        .get(getRestaurantPurchaseEndpoint(resto3.id))
+        .set('Authorization', `Bearer ${accessToken2}`);
+      expect(response.status).toBe(200);
+      expect(response.body.length).toBe(0);
     });
   });
 });
