@@ -1,8 +1,23 @@
 // File to put extra utility functions
 import { BadRequestException } from '@nestjs/common';
+import { RestaurantPaginator } from './dto/restaurant.dto';
 
 // Given a queryset (array of data), itemsPerPage, page, perform pagination
-export function paginate(qs: any, itemsPerPage: number, page: number): any {
+export function paginate(
+  qs: any,
+  itemsPerPage: number,
+  page: number,
+): RestaurantPaginator {
+  if (qs.length == 0)
+    return {
+      items: qs,
+      pagination: {
+        totalPages: 0,
+        totalItems: qs.length,
+        hasNext: false,
+        hasPrev: false,
+      },
+    };
   const totalItems = qs.length;
   const numPages = Math.ceil(totalItems / itemsPerPage);
   if (page < 1 || page > numPages)
@@ -12,7 +27,8 @@ export function paginate(qs: any, itemsPerPage: number, page: number): any {
   return {
     items: qs,
     pagination: {
-      total: numPages,
+      totalPages: numPages,
+      totalItems: qs.length,
       hasNext: page < numPages,
       hasPrev: page > 1,
     },

@@ -129,7 +129,8 @@ export interface RestaurantWithMenu {
 export interface RestaurantPaginator {
   items: Restaurant[];
   pagination: {
-    total: number;
+    totalPages: number;
+    totalItems: number;
     hasNext: boolean;
     hasPrev: boolean;
   };

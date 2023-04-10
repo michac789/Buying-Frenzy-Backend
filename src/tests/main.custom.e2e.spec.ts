@@ -66,11 +66,15 @@ describe('App Main (Restaurant Generic Endpoints) e2e', () => {
       .post(loginEndpoint)
       .send(sendData2);
     accessToken2 = responseToken2.body.accessToken;
+
+    // populate sample restaurant and menu
+    // restaurant
+    await 
   });
 
   afterAll(async () => await model.cleanDb());
 
-  // describe('[POST] /restaurant/ (restaurant-create)', () => {
+    // describe('[POST] /restaurant/ (restaurant-create)', () => {
   //   const restaurantCreateEndpoint = '/restaurant/';
 
   //   it('Return 401 if not logged in', async () => {
