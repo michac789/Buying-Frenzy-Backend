@@ -671,9 +671,21 @@ Currently there are 89 test cases, including individidual function unit testing 
 
 ![Test2](/assets/test2.png)
 
+![Test3](/assets/test3.png)
+
 TODO - put more testing results here (about 20% of the endpoints does not have test cases yet)
 
-## How To Run
+Currently there are 89 test cases, including individidual function unit testing and end to end testing. You can run all test cases by doing `yarn test` or specific test file by doing `yarn src/tests/<test_file_name>`.
+
+![Test0](/assets/test0.png)
+
+![Test1](/assets/test1.png)
+
+![Test2](/assets/test2.png)
+
+TODO - put more testing results here (about 20% of the endpoints does not have test cases yet)
+
+## How To Setup Development Environment
 
 1. Clone the repository, make sure you have node (v18.x is recommended) installed, and prefarably yarn as package manager
 

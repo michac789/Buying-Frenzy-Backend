@@ -10,7 +10,6 @@ describe('Utils (in sample & main) Unit Test (*test output of utility functions)
       expect(result).toBe(
         '15:45/20:15/15:45/20:15/05:15/23:00/08:45/19:30/10:00/20:45/05:45/23:00/08:45/19:30',
       );
-      console.log(result);
     });
 
     it('Sample Case 2', () => {
@@ -45,7 +44,6 @@ describe('Utils (in sample & main) Unit Test (*test output of utility functions)
       const sample =
         'Sun - Tues, Thurs 6 am - 6:15 pm / Weds 11:30 am - 3:15 am / Fri 11:45 am - 3 am / Sat 2:15 pm - 5:15 pm';
       const result = convertOpeningHoursString(sample);
-      console.log(result);
       expect(result).toBe(
         '06:00/18:15/06:00/18:15/11:30/03:15/06:00/18:15/11:45/03:00/14:15/17:15/06:00/18:15',
       );

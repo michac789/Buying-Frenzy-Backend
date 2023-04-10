@@ -6,6 +6,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Menu } from '@prisma/client';
 
 class PurchaseItemDto {
   @IsInt()
@@ -22,4 +23,13 @@ export class PurchaseDto {
   @ValidateNested({ each: true })
   @Type(() => PurchaseItemDto)
   items: PurchaseItemDto[];
+}
+
+export interface PurchaseHistoryWithMenu {
+  id: number;
+  transactionDate: Date;
+  userId: number;
+  menuId: number;
+  menuName: string;
+  menuPrice: number;
 }

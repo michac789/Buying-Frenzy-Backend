@@ -85,10 +85,8 @@ export class RestaurantQueryParams extends PaginatorQueryParams {
   @IsOptional()
   datetime?: string;
 
-  @Type(() => Boolean)
-  @IsBoolean()
   @IsOptional()
-  sort?: boolean; // default false, if true sort alphabetically
+  sort?: string; // default 'true' sort alphabetically, otherwise no
 
   @Type(() => Number)
   @IsNumber()
@@ -129,7 +127,8 @@ export interface RestaurantWithMenu {
 export interface RestaurantPaginator {
   items: Restaurant[];
   pagination: {
-    total: number;
+    totalPages: number;
+    totalItems: number;
     hasNext: boolean;
     hasPrev: boolean;
   };

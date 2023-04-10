@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgres://postgres:Mich1907%23@mydatabase.cubkol3kj008.ap-southeast-1.rds.amazonaws.com/initialdb"
 }
 
 model Restaurant {
