@@ -9,17 +9,46 @@ Table of contents:
 
 ## Overview
 
-Complete functional backend application created using NodeJS and NestJS Framework.
+This is a complete functional backend application created using NodeJS & 100% Typescript, with complete endpoints to navigate through all data, with JWT authentication, testing covering all endpoints, and achieving the required functionality needed to be supported by frontend.
 
-TODO
+### Tech Stack
+
+I used NestJS Framework, integrated with Prisma ORM (Object Relational Mapper) to connect to underlying PostgreSQL. During development, use Docker volumes to setup and store data.
 
 ### Requirement Remarks
 
-TODO
+Here are some of my comments to fulfill the requirement as prompted:
+
+> The task is to build an API server, with documentation and a backing relational database that will allow a front-end client to navigate through that sea of data easily, and intuitively. The front-end team will later use that documentation to build the front-end clients. We'd much prefer you to use Node.js (Typescript is a bonus!), as that is what we use at Glints.
+
+API server and backing relational database completely running (see deployment section below for more details). Documentation is done manually here in README.md. Some options like Swagger automated documentation could also be an option (I used it with Django REST Framework on my past projects). All the endpoints preety much cover all functionality that I'd imagine intuitively possible (for example: top up cashBalance for user, get purchases made by user, etc.; refer to API docs below for the complete details). In real projects, of course I'd have to closely work together with the frontend team or see the UI/UX design to know what endpoints need to be created and the specific implementation details; here I am creating some of the endpoints just based on what I'd imagine the frontend might be.
+
+> List all restaurants that are open at a certain datetime
+> List top y restaurants that have more or less than x number of dishes within a price range, ranked alphabetically. More or less (than x) is a parameter that the API allows the consumer to enter.
+
+These are implemented in the endpoint `[GET] /restaurant/` (see below documentation for more details); you can achieve this by customizing the query parameters.
+
+> Search for restaurants or dishes by name, ranked by relevance to search term
+
+I used a simple algorithm for this, refer to the endpoint `[GET] /restaurant/search/` for more details.
+
+> Process a user purchasing a dish from a restaurant, handling all relevant data changes in an atomic transaction. Do watch out for potential race conditions that can arise from concurrent transactions!
+
+Refer to the endpoint `[POST] /purchase/`, potential race conditions is resolved by optimistic locking to prevent conflicts.
 
 ### Deployment
 
-TODO - add link
+The deployed version is available [here](http://glints-backend-assignment.ap-southeast-1.elasticbeanstalk.com/). It is deployed using AWS Elastic Beanstalk, using RDS free tier to host the PostgreSQL. Currently, it is still http as I didn't issue a certificate yet or setup a custom DNS yet (as this is just a sample application). I put this README.md as a pdf on AWS S3 (to be linked from my application).
+
+### Security Remarks
+
+This sample application is not set up to be invulnerable to security issues yet. Some of the current vulnerabilities include:
+
+- Database is made 100% public and it allows connection from any host in Singapore (AWS ap-southeast-2)
+- Backend has no CORS setup yet, meaning that any application can access the API, which mostly not the case at all (you only want some trusted host to access your API)
+- CSRF issue (usually you want some middleware to handle this)
+- Throttling or rate limiting might be required to prevent DDoS attack
+- Hide sensitive information in environment variables instead (e.g., secret string used to sign jwt token, database password)
 
 ## Complete API Documentation
 
@@ -215,7 +244,7 @@ Sample Output:
   - pricegte (non-negative number): 'price greater than or equal to' filter, default 0
   - dishlte (positive integer): 'dish count less than or equal to' filter, default 10000 (arbirary large)
   - dishgte (positive integer): 'dish count grater than or equal to' filter, default 1
-  - sort (boolean \*true/false): sort alphabetically if true, default false
+  - sort (string): sort alphabetically if 'true', otherwise false, default is also false
 - Return 200 if success, with pagination info (total pages, whether next/prev page exist, see sample output below for example)
 - Return 400 if any optional query params format is invalid
 
@@ -255,7 +284,8 @@ Sample Output 1:
             }
         ],
         "pagination": {
-            "total": 735,
+            "totalPages": 735,
+            "totalItems": 2204,
             "hasNext": true,
             "hasPrev": true
         }
@@ -289,7 +319,8 @@ Sample Output 2:
             }
         ],
         "pagination": {
-            "total": 82,
+            "totalPages": 82,
+            "totalItems": 164,
             "hasNext": true,
             "hasPrev": false
         }
@@ -321,7 +352,8 @@ Sample Output 3:
             }
         ],
         "pagination": {
-            "total": 9,
+            "totalPages": 9,
+            "totalItems": 9,
             "hasNext": false,
             "hasPrev": true
         }
@@ -340,6 +372,7 @@ Sample Output 3:
     - The max of all of that is 0.81, which will be the relevance
     - Note that we ignore the case here (all letters will be lower cased first)
     - Looking at this example, if you'd search something like `Italian` (referring to italian food), the relevance would be quite low (same with other synonyms or relevant words that is completely different with the restaurant or menu name)
+    - Realistically, using services like Elastic Search would make a lot more sense as it can solve the weakness mentioned above
 - Return 200 if success, with relevance for each restaurant & pagination info.
   Return 400 if any optional query params format is invalid.
 
@@ -452,7 +485,8 @@ Sample Output:
             }
         ],
         "pagination": {
-            "total": 1102,
+            "totalPages": 1102,
+            "totalItems": 3304,
             "hasNext": true,
             "hasPrev": false
         }
@@ -620,6 +654,11 @@ Sample Output:
 - Return 201 if success, with the purchase instances created.
 - Return 401 if not logged in.
 - Return 400 if it does not satisfy dto constraint, or if store currently closed.
+  - \*_Remarks: currently I do not check if store is currently closed or not (implemented that by I comment that part); some reason why I don't include that currently are:_
+    - It is annoying that during testing, some restaurants are actually closed and you cannot make the purchase
+    - Currently the time still uses GMT+0, so it might cause testing issue and frustration to the tester
+    - Some dirty data found (from the json sample data given), including some that says something like 'Monday, open at 21:00 and close at 03:00': technically 3am is already the next day; data like that shouldn't be allowed in the first place but is in the sample data, so then I decided to not check whether store is open or not when making purchases
+    - It is hard to incorporate this feature to test case (well you can mock the current time to use a specific time instead of just current time that makes the test result differs everytime, but generally it is more difficult to do so)
 - Return 404 if any of the menuId is invalid.
 - Return 402 if cash balance insufficient.
 
@@ -651,10 +690,45 @@ Sample Output:
         }
     ]
 
+### `[GET] /purchase/me/`
+
+- Get all purchases (see return format below) made by current requesting user.
+- Return 401 if not logged in.
+- Return 200 if success.
+
+Sample Output:
+
+    [
+        {
+            "id": 137,
+            "transactionDate": "2018-09-19T11:41:00.000Z",
+            "menuId": 24527,
+            "userId": 354,
+            "menuName": "Roastbeef",
+            "menuPrice": "10.99"
+        },
+        {
+            "id": 138,
+            "transactionDate": "2019-02-18T20:20:00.000Z",
+            "menuId": 13987,
+            "userId": 354,
+            "menuName": "CHARCOAL BROILED CHOPPED SIRLOIN STEAK",
+            "menuPrice": "10.27"
+        }
+    ]
+
+### `[GET] /purchase/restaurant/:id/`
+
+- Get all purchases made for all menus in a particular restaurant id, only available if requesting user is the restaurant owner.
+- Return 401 if not logged in.
+- Return 404 if restaurant id invalid.
+- Return 403 if restaurant not owned by requesting user.
+- Return 200 if success, with all purchases in a list, with similar format to the endpoint above.
+
 ### `[POST] /sample/populate/`
 
 Populate database with given sample data.
-It is an async function, it will run for a few seconds after you get the response.
+It is an async function, it will run for a few seconds after you get the response. Please call this function only once (in production environment, I have done this so please do not do it again!).
 
 ### `[DELETE] /sample/reset/`
 
@@ -663,27 +737,45 @@ Note that it does not reset the id count back to 1 again. It is an async functio
 
 ## Testing
 
-Currently there are 89 test cases, including individidual function unit testing and end to end testing.
+Currently there are a total 127 test cases, including individidual function unit testing and end to end testing, covering all the endpoints and handling many corner cases to ensure errors are handled gracefully and with an appropriate status code.
 
-![Test0](/assets/test0.png)
+### Testing Result
 
-![Test1](/assets/test1.png)
+Here are the screenshot of all the testing results, you can see which function or endpoint I tested, including the coverage (what are the cases) that I tested.
 
-![Test2](/assets/test2.png)
+1. Unit testing of some utility functions that are quite complicated (15 cases)
 
-![Test3](/assets/test3.png)
+![Test0](https://ntusu-api-static-prod.s3.ap-southeast-1.amazonaws.com/static/special/test0.png?response-content-disposition=inline&X-Amz-Security-Token=IQoJb3JpZ2luX2VjELb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0xIkYwRAIgeONxZkQqFCvyFJgL2imMl2AJJv%2BfKUgkBiCmptZ3EqECIHlYqQHdum8DMtbayS%2FJ85l2bVkx%2FGspTt6DxtTVmzvjKu0CCJ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQBBoMMTQzOTQxNjUxNjQwIgwKxoODKGtw6aF2yQUqwQK397EAJOdZrSvT0zk7cCDXFBD0t2Mli1m2QXkZn%2FCSddcxsU72sBzJGbBqANTxBGHcNcVEddNYuj7enmd%2BYKK%2BEdaQT2WFnww7R9MeVjhBoIN4CP%2BnpYScFMOG1OOqaySMzPyf8ntAj224wHAM1Krvgelc0PdJQkZC7CTgn2%2F0AeUQj8Y4bG941BRuLQxzcH5Xbh%2F4nzd2BA2f1w4p4dIVbWi7W5qRO1BBI0BzUYA8JzV2idt8CNBor%2F4PvlEwVsd0aoLnRjdwSd2HQwE7gDAxe5U5ASZGDTSISLHep%2F7%2FvnMUjXUVOZLu83ES2Vu1WMCKl7F%2Fz8YnzooeB1DqTPBSOk7haYksiDhVByR8o9fZGVrTyzjYUfFsC5IA44p6xgxcj5rQcM7cGmAL2l9ZiNw2whLjv4y7w6vAkXHP7yuaxcAwlqnSoQY6tALUCv8g%2Bkm0hd%2FTq%2FsslmdQGFRuJoYeLj%2Btk5hJrN2gU77R5wDIWTXDIlNc9c0%2BUfax7Pqyuqp%2BJQcFFSHShanYBO4TypDd6yVPGVv8Yy55wjDWEajwj5iYerf8m4f2NgxP7ywyH4NQRoeA5T%2B8SQ%2BFLq8XgWMEDjJb2JX936rjdcRzY4eADSX2DE4H7Ax4GeTHzX0XWL1P989n2TkNcmPwWIAzoT4Bw2D2wwOAas%2FiC558P34r2GR1Nb4OXSzF7WJn7h5npR6btRYah9WzWTuEqkb%2FjqMrIr2YYaiLGYOyvsI%2FMwGkX3nUXRDkEEFNNR0420kzHfszSY%2Fq5Dvy56BbCozxmtMDI3SweNPzqdsUEjbC6WLCDIOUNOtkF2ofgRFJSBVZ5xClnsLgCZX%2BaHABBowzkA%3D%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20230411T061905Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIASDA4XJS4BSDWGH3A%2F20230411%2Fap-southeast-1%2Fs3%2Faws4_request&X-Amz-Signature=3126a84ecf20ffb4dbd84a196366159b2871d3da2ff7a4322097a49cc8e515f6)
 
-TODO - put more testing results here (about 20% of the endpoints does not have test cases yet)
+2. End to End Testing of auth related functionality (see details on image below) (34 cases)
 
-Currently there are 89 test cases, including individidual function unit testing and end to end testing. You can run all test cases by doing `yarn test` or specific test file by doing `yarn src/tests/<test_file_name>`.
+![Test1](https://ntusu-api-static-prod.s3.ap-southeast-1.amazonaws.com/static/special/test1.png?response-content-disposition=inline&X-Amz-Security-Token=IQoJb3JpZ2luX2VjELb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0xIkYwRAIgeONxZkQqFCvyFJgL2imMl2AJJv%2BfKUgkBiCmptZ3EqECIHlYqQHdum8DMtbayS%2FJ85l2bVkx%2FGspTt6DxtTVmzvjKu0CCJ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQBBoMMTQzOTQxNjUxNjQwIgwKxoODKGtw6aF2yQUqwQK397EAJOdZrSvT0zk7cCDXFBD0t2Mli1m2QXkZn%2FCSddcxsU72sBzJGbBqANTxBGHcNcVEddNYuj7enmd%2BYKK%2BEdaQT2WFnww7R9MeVjhBoIN4CP%2BnpYScFMOG1OOqaySMzPyf8ntAj224wHAM1Krvgelc0PdJQkZC7CTgn2%2F0AeUQj8Y4bG941BRuLQxzcH5Xbh%2F4nzd2BA2f1w4p4dIVbWi7W5qRO1BBI0BzUYA8JzV2idt8CNBor%2F4PvlEwVsd0aoLnRjdwSd2HQwE7gDAxe5U5ASZGDTSISLHep%2F7%2FvnMUjXUVOZLu83ES2Vu1WMCKl7F%2Fz8YnzooeB1DqTPBSOk7haYksiDhVByR8o9fZGVrTyzjYUfFsC5IA44p6xgxcj5rQcM7cGmAL2l9ZiNw2whLjv4y7w6vAkXHP7yuaxcAwlqnSoQY6tALUCv8g%2Bkm0hd%2FTq%2FsslmdQGFRuJoYeLj%2Btk5hJrN2gU77R5wDIWTXDIlNc9c0%2BUfax7Pqyuqp%2BJQcFFSHShanYBO4TypDd6yVPGVv8Yy55wjDWEajwj5iYerf8m4f2NgxP7ywyH4NQRoeA5T%2B8SQ%2BFLq8XgWMEDjJb2JX936rjdcRzY4eADSX2DE4H7Ax4GeTHzX0XWL1P989n2TkNcmPwWIAzoT4Bw2D2wwOAas%2FiC558P34r2GR1Nb4OXSzF7WJn7h5npR6btRYah9WzWTuEqkb%2FjqMrIr2YYaiLGYOyvsI%2FMwGkX3nUXRDkEEFNNR0420kzHfszSY%2Fq5Dvy56BbCozxmtMDI3SweNPzqdsUEjbC6WLCDIOUNOtkF2ofgRFJSBVZ5xClnsLgCZX%2BaHABBowzkA%3D%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20230411T061950Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIASDA4XJS4BSDWGH3A%2F20230411%2Fap-southeast-1%2Fs3%2Faws4_request&X-Amz-Signature=eb5d886d4699cee41ab566b2371dadfa2dd56c89b7d72a5626af66b336edc210)
 
-![Test0](/assets/test0.png)
+3. End to End Testing of main generic API (see details on image below) (40 cases)
 
-![Test1](/assets/test1.png)
+![Test2](https://ntusu-api-static-prod.s3.ap-southeast-1.amazonaws.com/static/special/test2.png?response-content-disposition=inline&X-Amz-Security-Token=IQoJb3JpZ2luX2VjELb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0xIkYwRAIgeONxZkQqFCvyFJgL2imMl2AJJv%2BfKUgkBiCmptZ3EqECIHlYqQHdum8DMtbayS%2FJ85l2bVkx%2FGspTt6DxtTVmzvjKu0CCJ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQBBoMMTQzOTQxNjUxNjQwIgwKxoODKGtw6aF2yQUqwQK397EAJOdZrSvT0zk7cCDXFBD0t2Mli1m2QXkZn%2FCSddcxsU72sBzJGbBqANTxBGHcNcVEddNYuj7enmd%2BYKK%2BEdaQT2WFnww7R9MeVjhBoIN4CP%2BnpYScFMOG1OOqaySMzPyf8ntAj224wHAM1Krvgelc0PdJQkZC7CTgn2%2F0AeUQj8Y4bG941BRuLQxzcH5Xbh%2F4nzd2BA2f1w4p4dIVbWi7W5qRO1BBI0BzUYA8JzV2idt8CNBor%2F4PvlEwVsd0aoLnRjdwSd2HQwE7gDAxe5U5ASZGDTSISLHep%2F7%2FvnMUjXUVOZLu83ES2Vu1WMCKl7F%2Fz8YnzooeB1DqTPBSOk7haYksiDhVByR8o9fZGVrTyzjYUfFsC5IA44p6xgxcj5rQcM7cGmAL2l9ZiNw2whLjv4y7w6vAkXHP7yuaxcAwlqnSoQY6tALUCv8g%2Bkm0hd%2FTq%2FsslmdQGFRuJoYeLj%2Btk5hJrN2gU77R5wDIWTXDIlNc9c0%2BUfax7Pqyuqp%2BJQcFFSHShanYBO4TypDd6yVPGVv8Yy55wjDWEajwj5iYerf8m4f2NgxP7ywyH4NQRoeA5T%2B8SQ%2BFLq8XgWMEDjJb2JX936rjdcRzY4eADSX2DE4H7Ax4GeTHzX0XWL1P989n2TkNcmPwWIAzoT4Bw2D2wwOAas%2FiC558P34r2GR1Nb4OXSzF7WJn7h5npR6btRYah9WzWTuEqkb%2FjqMrIr2YYaiLGYOyvsI%2FMwGkX3nUXRDkEEFNNR0420kzHfszSY%2Fq5Dvy56BbCozxmtMDI3SweNPzqdsUEjbC6WLCDIOUNOtkF2ofgRFJSBVZ5xClnsLgCZX%2BaHABBowzkA%3D%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20230411T062039Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIASDA4XJS4BSDWGH3A%2F20230411%2Fap-southeast-1%2Fs3%2Faws4_request&X-Amz-Signature=1fb08ee65d1b3475e96a3b423bb279eab2c24195d0b5a15e4b75163ed0a65aab)
 
-![Test2](/assets/test2.png)
+4. End to End Testing of main customized API (see details on image below) (38 cases)
 
-TODO - put more testing results here (about 20% of the endpoints does not have test cases yet)
+![Test3](https://ntusu-api-static-prod.s3.ap-southeast-1.amazonaws.com/static/special/test3.png?response-content-disposition=inline&X-Amz-Security-Token=IQoJb3JpZ2luX2VjELb%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaDmFwLXNvdXRoZWFzdC0xIkYwRAIgeONxZkQqFCvyFJgL2imMl2AJJv%2BfKUgkBiCmptZ3EqECIHlYqQHdum8DMtbayS%2FJ85l2bVkx%2FGspTt6DxtTVmzvjKu0CCJ%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQBBoMMTQzOTQxNjUxNjQwIgwKxoODKGtw6aF2yQUqwQK397EAJOdZrSvT0zk7cCDXFBD0t2Mli1m2QXkZn%2FCSddcxsU72sBzJGbBqANTxBGHcNcVEddNYuj7enmd%2BYKK%2BEdaQT2WFnww7R9MeVjhBoIN4CP%2BnpYScFMOG1OOqaySMzPyf8ntAj224wHAM1Krvgelc0PdJQkZC7CTgn2%2F0AeUQj8Y4bG941BRuLQxzcH5Xbh%2F4nzd2BA2f1w4p4dIVbWi7W5qRO1BBI0BzUYA8JzV2idt8CNBor%2F4PvlEwVsd0aoLnRjdwSd2HQwE7gDAxe5U5ASZGDTSISLHep%2F7%2FvnMUjXUVOZLu83ES2Vu1WMCKl7F%2Fz8YnzooeB1DqTPBSOk7haYksiDhVByR8o9fZGVrTyzjYUfFsC5IA44p6xgxcj5rQcM7cGmAL2l9ZiNw2whLjv4y7w6vAkXHP7yuaxcAwlqnSoQY6tALUCv8g%2Bkm0hd%2FTq%2FsslmdQGFRuJoYeLj%2Btk5hJrN2gU77R5wDIWTXDIlNc9c0%2BUfax7Pqyuqp%2BJQcFFSHShanYBO4TypDd6yVPGVv8Yy55wjDWEajwj5iYerf8m4f2NgxP7ywyH4NQRoeA5T%2B8SQ%2BFLq8XgWMEDjJb2JX936rjdcRzY4eADSX2DE4H7Ax4GeTHzX0XWL1P989n2TkNcmPwWIAzoT4Bw2D2wwOAas%2FiC558P34r2GR1Nb4OXSzF7WJn7h5npR6btRYah9WzWTuEqkb%2FjqMrIr2YYaiLGYOyvsI%2FMwGkX3nUXRDkEEFNNR0420kzHfszSY%2Fq5Dvy56BbCozxmtMDI3SweNPzqdsUEjbC6WLCDIOUNOtkF2ofgRFJSBVZ5xClnsLgCZX%2BaHABBowzkA%3D%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20230411T062129Z&X-Amz-SignedHeaders=host&X-Amz-Expires=299&X-Amz-Credential=ASIASDA4XJS4BSDWGH3A%2F20230411%2Fap-southeast-1%2Fs3%2Faws4_request&X-Amz-Signature=73d5162b2526c95e29c7fca8d985b4785ec3a4afe6592b4b3b8fafb4c84b6391)
+
+Please refer to `src/tests/` if you want to see in more details about the exact sample data or case, and how I tested a particular functionality.
+
+### Testing Remarks
+
+Some points I'd like to mention regarding my testing method:
+
+- Current test actually does it using database that you're connected to, you can change your database connection at `src/model/model.service.ts`
+  - This means that when running test cases, it will reset your actual database connected
+  - You might want to perform testing on a sample database (not production database)
+- I implemented CI/CD using GitHub action (have to pass all cases before merging to main branch), but currently only functions to test case that does not require database connection
+- Usually, some other alternatives of testing that does not involve tweaking database are:
+  - Use mock database, there should be libraries/modules that can do this
+  - Use a container on Docker, when testing automate creation of sample database
+
+### How to Perform Testing
+
+You can run all test cases by doing `yarn test` or run specific test file (test suite) by doing `yarn src/tests/<test_file_name>`. You might have to `Ctrl+C` first and run `yarn test` again if you make any changes. Again, since I am not mocking the database, please be wary when running the test. Running the test will reset your entire database (so maybe use a local database setup in docker and do not use the live one).
 
 ## How To Setup Development Environment
 
@@ -691,7 +783,7 @@ TODO - put more testing results here (about 20% of the endpoints does not have t
 
 2. Install all dependencies with `yarn install`
 
-3. Run database using docker with the command `docker compose up db` (by default setup at port 5432)
+3. Run database using docker with the command `docker compose up db` (by default setup at port 5432), please change the database connection on `src/model/model.service.ts` to use the ones in Docker and not the production database
 
 4. Install prisma cli, then you can type `npx prisma migrate dev` to makemigrations and migrate changes to the database
 
@@ -702,3 +794,7 @@ TODO - put more testing results here (about 20% of the endpoints does not have t
 7. You can run `npx prisma studio` to host an admin page with UI to view and navigate through the database, by default hosted in port 5555
 
 8. Type `yarn test` to run all test cases, or you can try manually requesting the APIs
+
+Let me know if there are any issues while doing all of these.
+
+If you reach down here, thanks for taking your time to go through all of this. I hope that my implementations and explanations meet your standard!
